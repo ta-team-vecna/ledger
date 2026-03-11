@@ -1,7 +1,13 @@
-@Ledger = {}
-@Ledger.Api_HostAddress = http://localhost:3001
+@Ledger = http://localhost:3001
 
-GET {{Ledger.Api_HostAddress}}/weatherforecast/
-Accept: application/json
+POST {{Ledger}}/api/auth/register
+Content-Type: application/json
+
+{
+  "firstName": "Ivan",
+  "lastName": "Ivanov",
+  "email": "ivan.ivanov@gmail.com",
+  "password": "test123"
+}
 
 ###
