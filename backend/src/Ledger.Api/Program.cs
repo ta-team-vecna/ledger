@@ -40,6 +40,10 @@ builder.Services.AddScoped<IPasswordHasher<ApplicationUser>, PasswordHasher<Appl
 var app = builder.Build();
 if (app.Environment.IsDevelopment()) {
     app.MapOpenApi();
+
+    app.UseSwaggerUI(options => {
+        options.SwaggerEndpoint("/openapi/v1.json", "Ledger API v1");
+    });
 }
 
 app.UseHttpsRedirection();
