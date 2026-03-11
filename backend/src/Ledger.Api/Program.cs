@@ -15,6 +15,8 @@ builder.Services.AddOpenApi();
 var jwtSection = builder.Configuration.GetSection(JwtOptions.SectionName);
 var jwt = jwtSection.Get<JwtOptions>() ?? throw new InvalidOperationException("Jwt settings missing from app settings.json.");
 
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options => {
     options.TokenValidationParameters = new TokenValidationParameters {
         ValidateIssuer = true,
@@ -41,8 +43,8 @@ if (app.Environment.IsDevelopment()) {
 }
 
 app.UseHttpsRedirection();
-app.UseAuthorization();
 app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 
