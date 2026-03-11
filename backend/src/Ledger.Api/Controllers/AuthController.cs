@@ -33,7 +33,6 @@ public class AuthController : ControllerBase {
         var exists = await _db.Users.AnyAsync(x => x.Email == email);
         if (exists) {
             return Conflict(new ProblemDetails {
-                Title = "Conflict",
                 Detail = "Email already exists.",
                 Status = StatusCodes.Status409Conflict,
             });
