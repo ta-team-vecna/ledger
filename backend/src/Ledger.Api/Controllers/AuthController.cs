@@ -62,4 +62,37 @@ public class AuthController : ControllerBase {
             user.Role.ToString()
         ));
     }
+
+    [HttpPost("login")]
+    [AllowAnonymous]
+    public async Task<ActionResult<AuthResponse>> Login(LoginRequest request) {
+        var email = request.Email.Trim().ToLowerInvariant();
+
+        var user = await _db.Users.FirstOrDefaultAsync(x => x.Email == email);
+        if (user is null) {
+            return Unauthorized(new ProblemDetails {
+                Detail = "Invalid credentials.",
+                Status = StatusCodes.Status401Unauthorized,
+            });
+        }
+
+        var result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
+        if (result is PasswordVerificationResult.Failed) {
+            return Unauthorized(new ProblemDetails {
+                Detail = "Invalid credentials.",
+                Status = StatusCodes.Status401Unauthorized,
+            });
+        }
+
+        var token = _jwtTokenService.CreateToken(user);
+        
+        return Ok(new AuthResponse(
+            token,
+            user.Id,
+            user.FirstName,
+            user.LastName,
+            user.Email,
+            user.Role.ToString()
+        ));
+    }
 }

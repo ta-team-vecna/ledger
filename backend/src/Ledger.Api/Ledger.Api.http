@@ -6,8 +6,28 @@ Content-Type: application/json
 {
   "firstName": "Ivan",
   "lastName": "Ivanov",
-  "email": "ivan.ivanov1@gmail.com",
+  "email": "ivan.ivanov@gmail.com",
   "password": "test123"
 }
+
+###
+
+POST {{Ledger}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "ivan.ivanov@gmail.com",
+  "password": "test123"
+}
+
+> {%
+    client.global.set("auth_token", response.body.token)
+%}
+
+###
+
+GET {{Ledger}}/api/auth/me
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
 
 ###
