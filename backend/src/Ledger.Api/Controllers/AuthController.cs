@@ -85,7 +85,7 @@ public class AuthController : ControllerBase {
         }
 
         var token = _jwtTokenService.CreateToken(user);
-        
+
         return Ok(new AuthResponse(
             token,
             user.Id,
@@ -94,5 +94,16 @@ public class AuthController : ControllerBase {
             user.Email,
             user.Role.ToString()
         ));
+    }
+
+    [HttpGet("me")]
+    [Authorize]
+    public ActionResult<object> Me() {
+        return Ok(new {
+            UserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value,
+            Email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value,
+            Role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value,
+            Name = User.Identity?.Name,
+        });
     }
 }
