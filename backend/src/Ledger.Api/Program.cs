@@ -16,6 +16,7 @@ var jwtSection = builder.Configuration.GetSection(JwtOptions.SectionName);
 var jwt = jwtSection.Get<JwtOptions>() ?? throw new InvalidOperationException("Jwt settings missing from app settings.json.");
 
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
+builder.Services.Configure<RouteOptions>(options => { options.LowercaseUrls = true; });
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options => {
     options.TokenValidationParameters = new TokenValidationParameters {
@@ -41,9 +42,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment()) {
     app.MapOpenApi();
 
-    app.UseSwaggerUI(options => {
-        options.SwaggerEndpoint("/openapi/v1.json", "Ledger API v1");
-    });
+    app.UseSwaggerUI(options => { options.SwaggerEndpoint("/openapi/v1.json", "Ledger API v1"); });
 }
 
 app.UseHttpsRedirection();
