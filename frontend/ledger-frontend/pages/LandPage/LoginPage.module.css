@@ -1,0 +1,76 @@
+:root{
+  --accent-color:#415b80; 
+  --page-background-color: #f3f6fa;
+  --card-background-color: #ffffff;
+  font-family:  Roboto;
+}
+
+.topBar {
+  width: 100%; 
+  min-height: clamp(3vh, 8vw, 9vh);
+  background-color: var(--accent-color);
+  display: flex;
+  align-items: center;       
+  justify-content: center;   
+  position: relative;
+  left: 0;
+  right: 0;
+}
+
+.topBar p {
+  color: white;
+  font-weight: bolder;
+  font-size: clamp(16px, 4vw, 32px);
+  margin: 0;  
+}
+
+html, body {
+  margin: 0;
+  width: 100%;
+  overflow-x: hidden;
+  background-color: var(--page-background-color); 
+}
+
+.loginCard {
+  background-color: var(--card-background-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;       
+  justify-content: center;   
+  position: fixed;
+  width: clamp(350px, 60vw, 500px);
+  top: 50%;
+  left: 50%;
+  height: 500px;
+  transform: translate(-50%, -50%);
+  border-radius: 12px;  
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 
+    0 1px 3px rgba(0,0,0,0.08),    /* Very subtle all-around */
+    0 20px 25px -15px rgba(0,0,0,0.4); /* Heavy bottom spread */
+}
+
+.loginCard h1 {
+  color: var(--accent-color);
+  font-size: clamp(16px, 7vw, 32px);
+}
+
+.loginCard p {
+  color: var(--accent-color);
+  font-size: clamp(12px, 4vw, 18px);
+  font-weight: bolder;
+}
+
+  .loginCard .TextInput , .customButton  {
+    margin-bottom: 20px !important;
+    width: 90%;
+    min-height: 60px;
+  }
+
+  .customButton{
+    min-height: 60px;
+  }
+
+.customLink{
+  margin-bottom: 20px !important;
+}
