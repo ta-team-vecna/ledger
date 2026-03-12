@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Ledger.Api.Auth;
 using Ledger.Api.Data;
 using Ledger.Api.Domain;
@@ -98,12 +99,22 @@ public class AuthController : ControllerBase {
 
     [HttpGet("me")]
     [Authorize]
-    public ActionResult<object> Me() {
-        return Ok(new {
-            UserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value,
-            Email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value,
-            Role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value,
-            Name = User.Identity?.Name,
-        });
+    public ActionResult<CurrentUserResponse> Me() {
+        var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        var email = User.FindFirst(ClaimTypes.Email)!.Value;
+        var fullName = User.FindFirst(ClaimTypes.Name)?.Value ?? "";
+        var role = User.FindFirst(ClaimTypes.Role)!.Value;
+
+        var parts = fullName.Split(' ', 2, StringSplitOptions.TrimEntries);
+        var firstName = parts.Length > 0 ? parts[0] : "";
+        var lastName = parts.Length > 1 ? parts[1] : "";
+
+        return Ok(new CurrentUserResponse(
+            userId,
+            firstName,
+            lastName,
+            email,
+            role
+        ));
     }
 }
