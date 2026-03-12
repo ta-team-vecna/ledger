@@ -1,0 +1,34 @@
+/* @ts-nocheck */
+:root{
+  --accent-color:#415b80; 
+  --page-background-color: #f3f6fa;
+  --card-background-color: #ffffff;
+  font-family:  Roboto;
+}
+
+.topBar {
+  width: 100%;  
+  min-height: clamp(3vh, 8vw, 9vh);
+  background-color: var(--accent-color);
+  display: flex;
+  align-items: center;       
+  justify-content: center;   
+  position: relative;
+  left: 0;
+  right: 0;
+}
+
+.topBar p {
+  color: white;
+  font-weight: bolder;
+  font-size: clamp(16px, 4vw, 32px);
+  margin: 0;  
+}
+
+.topBar a {
+  color: white;
+  font-weight: bolder;
+  font-size: clamp(14px, 4vw,24px);
+  margin: 0;
+  margin: 0 10px 0 10px;  
+}
