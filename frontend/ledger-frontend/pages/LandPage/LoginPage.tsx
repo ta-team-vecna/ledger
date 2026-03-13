@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link as RouterLink } from "react-router-dom";
 import styles from "./LoginPage.module.css";
 import { Button, TextField, Link, Alert } from "@mui/material";
 import { useAuth } from "../../src/context/useAuth";
@@ -55,7 +55,7 @@ const LoginPage = () => {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-          <Link href="/forgot-password" className={styles.customLink} id="forgot-password-link">
+          <Link component={RouterLink} to="/forgot-password" className={styles.customLink} id="forgot-password-link">
             Forgot password?
           </Link>
           <Button
@@ -68,7 +68,7 @@ const LoginPage = () => {
             {isSubmitting ? "Logging in..." : "Log in"}
           </Button>
         </form>
-        <Link href="/register" className={styles.customLink} id="register-link">
+        <Link component={RouterLink} to="/register" className={styles.customLink} id="register-link">
           Register here
         </Link>
         <div className={styles.customLinkDiv}></div>

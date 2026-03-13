@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link as RouterLink } from "react-router-dom";
 import styles from "./LoginPage.module.css";
 import { Button, TextField, Link, Alert } from "@mui/material";
 import { useAuth } from "../../src/context/useAuth";
@@ -96,7 +96,7 @@ const RegisterPage = () => {
             {isSubmitting ? "Registering..." : "Register"}
           </Button>
         </form>
-        <Link href="/login" className={styles.customLink} id="login-link">
+        <Link component={RouterLink} to="/login" className={styles.customLink} id="login-link">
           Already have an account? Log in
         </Link>
         <div className={styles.customLinkDiv}></div>
