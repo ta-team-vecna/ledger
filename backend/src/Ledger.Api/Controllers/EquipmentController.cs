@@ -46,7 +46,6 @@ public sealed class EquipmentController : ControllerBase {
         return Ok(item);
     }
 
-    private EquipmentResponse ResponseFromEntity(Equipment x) => new(
     [HttpPost]
     [Authorize(Roles = "Admin")]
     public async Task<ActionResult<EquipmentResponse>> Create(CreateEquipmentRequest request) {
@@ -79,6 +78,8 @@ public sealed class EquipmentController : ControllerBase {
 
         return CreatedAtAction(nameof(GetById), new { id = entity.Id }, response);
     }
+
+    private static EquipmentResponse ResponseFromEntity(Equipment x) => new(
         x.Id,
         x.Name,
         x.Type,
