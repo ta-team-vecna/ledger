@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link as RouterLink } from "react-router-dom";
-import styles from "./LoginPage.module.css";
+import styles from "./AuthPage.module.css";
 import { Button, TextField, Link, Alert } from "@mui/material";
 import { useAuth } from "../../src/context/useAuth";
 
