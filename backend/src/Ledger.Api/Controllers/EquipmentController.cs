@@ -103,6 +103,23 @@ public sealed class EquipmentController : ControllerBase {
         return Ok(ResponseFromEntity(entity));
     }
 
+    [HttpPatch("{id:guid}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> UpdateStatus(Guid id, UpdateEquipmentStatusRequest request) {
+        var entity = await _db.Equipment.FirstOrDefaultAsync(x => x.Id == id);
+        if (entity is null) {
+            return NotFound(new ProblemDetails {
+                Detail = "Equipment was not found.",
+                Status = StatusCodes.Status404NotFound,
+            });
+        }
+
+        entity.Status = request.Status;
+        await _db.SaveChangesAsync();
+
+        return NoContent();
+    }
+
     private static EquipmentResponse ResponseFromEntity(Equipment x) => new(
         x.Id,
         x.Name,
