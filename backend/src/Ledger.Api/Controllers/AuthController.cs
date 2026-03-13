@@ -12,7 +12,7 @@ namespace Ledger.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController : ControllerBase {
+public sealed class AuthController : ControllerBase {
     private readonly AppDbContext _db;
     private readonly IPasswordHasher<ApplicationUser> _passwordHasher;
     private readonly IJwtTokenService _jwtTokenService;
