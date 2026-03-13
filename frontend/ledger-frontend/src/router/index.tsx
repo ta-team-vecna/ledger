@@ -1,8 +1,15 @@
+import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
-import LoginPage from '../../pages/LandPage/LoginPage';
-import RegisterPage from '../../pages/LandPage/RegisterPage';
-import Dashboard from '../../pages/Dashboard/Dashboard';
 import { ProtectedRoute, PublicRoute } from '../components/RouteGuards';
+import LoadingSpinner from '../components/LoadingSpinner';
+
+const LoginPage = lazy(() => import('../../pages/LandPage/LoginPage'));
+const RegisterPage = lazy(() => import('../../pages/LandPage/RegisterPage'));
+const Dashboard = lazy(() => import('../../pages/Dashboard/Dashboard'));
+
+const withSuspense = (element: React.ReactNode) => (
+  <Suspense fallback={<LoadingSpinner />}>{element}</Suspense>
+);
 
 export const router = createBrowserRouter([
   {
@@ -11,7 +18,7 @@ export const router = createBrowserRouter([
   },
   {
     path: '/login',
-    element: (
+    element: withSuspense(
       <PublicRoute>
         <LoginPage />
       </PublicRoute>
@@ -19,7 +26,7 @@ export const router = createBrowserRouter([
   },
   {
     path: '/register',
-    element: (
+    element: withSuspense(
       <PublicRoute>
         <RegisterPage />
       </PublicRoute>
@@ -27,7 +34,7 @@ export const router = createBrowserRouter([
   },
   {
     path: '/dashboard',
-    element: (
+    element: withSuspense(
       <ProtectedRoute>
         <Dashboard />
       </ProtectedRoute>
