@@ -13,9 +13,9 @@ builder.Services.AddDbContext<AppDbContext>(options => { options.UseNpgsql(build
 builder.Services.AddOpenApi();
 
 builder.Services.AddCors(options => {
-    options.AddPolicy("AllowAll", policy => {
+    options.AddPolicy("Frontend", policy => {
         policy
-            .AllowAnyOrigin()
+            .WithOrigins("http://localhost:5173")
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials();
@@ -63,7 +63,7 @@ if (app.Environment.IsDevelopment()) {
     app.UseSwaggerUI(options => { options.SwaggerEndpoint("/openapi/v1.json", "Ledger API v1"); });
 }
 
-app.UseCors("AllowAll");
+app.UseCors("Frontend");
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
