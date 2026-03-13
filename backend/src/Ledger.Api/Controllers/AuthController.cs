@@ -112,6 +112,7 @@ public class AuthController : ControllerBase {
     [AllowAnonymous]
     public IActionResult Logout() {
         Response.Cookies.Delete("token");
+
         return Ok();
     }
 
