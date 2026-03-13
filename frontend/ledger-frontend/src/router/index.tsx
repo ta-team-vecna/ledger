@@ -1,19 +1,27 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import LoginPage from '../../pages/LandPage/LoginPage';
-import Dashboard from '../../pages/Dashboard/Dashboard'
-// import OtherPage from '../pages/OtherPage';
+import Dashboard from '../../pages/Dashboard/Dashboard';
+import { ProtectedRoute, PublicRoute } from '../components/RouteGuards';
 
 export const router = createBrowserRouter([
   {
     path: '/',
-    element: <LoginPage/>,
+    element: <Navigate to="/login" replace />,
   },
   {
-    path:"/dashboard",
-    element:<Dashboard/>
-  }
-  // {
-  //   path: '/about',
-  //   element: <AboutPage />,
-  // },
+    path: '/login',
+    element: (
+      <PublicRoute>
+        <LoginPage />
+      </PublicRoute>
+    ),
+  },
+  {
+    path: '/dashboard',
+    element: (
+      <ProtectedRoute>
+        <Dashboard />
+      </ProtectedRoute>
+    ),
+  },
 ]);
