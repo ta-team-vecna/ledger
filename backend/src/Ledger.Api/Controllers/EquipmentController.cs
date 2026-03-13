@@ -22,17 +22,7 @@ public sealed class EquipmentController : ControllerBase {
         var items = await _db.Equipment
             .AsNoTracking()
             .OrderBy(x => x.Name)
-            .Select(x => new EquipmentResponse(
-                x.Id,
-                x.Name,
-                x.Type,
-                x.SerialNumber,
-                x.Condition,
-                x.Status.ToString(),
-                x.Location,
-                x.PhotoUrl,
-                x.RequiresAdminApproval
-            ))
+            .Select(x => ResponseFromEntity(x))
             .ToListAsync();
 
         return Ok(items);
@@ -57,6 +47,38 @@ public sealed class EquipmentController : ControllerBase {
     }
 
     private EquipmentResponse ResponseFromEntity(Equipment x) => new(
+    [HttpPost]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<EquipmentResponse>> Create(CreateEquipmentRequest request) {
+        var serialExists = await _db.Equipment
+            .AnyAsync(x => x.SerialNumber == request.SerialNumber);
+
+        if (serialExists) {
+            return Conflict(new ProblemDetails {
+                Detail = "An equipment item with the provided serial number already exists.",
+                Status = StatusCodes.Status409Conflict,
+            });
+        }
+
+        var entity = new Equipment {
+            Id = Guid.NewGuid(),
+            Name = request.Name.Trim(),
+            Type = request.Type.Trim(),
+            SerialNumber = request.SerialNumber.Trim(),
+            Condition = request.Condition.Trim(),
+            Status = EquipmentStatus.Available,
+            Location = request.Location.Trim(),
+            PhotoUrl = string.IsNullOrWhiteSpace(request.PhotoUrl) ? null : request.PhotoUrl.Trim(),
+            RequiresAdminApproval = request.RequiresAdminApproval,
+        };
+
+        _db.Equipment.Add(entity);
+        await _db.SaveChangesAsync();
+
+        var response = ResponseFromEntity(entity);
+
+        return CreatedAtAction(nameof(GetById), new { id = entity.Id }, response);
+    }
         x.Id,
         x.Name,
         x.Type,
