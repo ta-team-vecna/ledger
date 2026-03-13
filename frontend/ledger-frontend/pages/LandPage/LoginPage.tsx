@@ -18,7 +18,7 @@ const LoginPage = () => {
     setIsSubmitting(true);
 
     try {
-      await login(email, password);
+      await login(email.trim(), password);
       navigate("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");

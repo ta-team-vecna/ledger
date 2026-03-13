@@ -15,9 +15,16 @@ const RegisterPage = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
 
+  const removeWhitespace = (value: string) => value.replace(/\s+/g, "");
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (/\s/.test(password) || /\s/.test(confirmPassword)) {
+      setError("Password cannot contain spaces");
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError("Passwords do not match");
@@ -27,7 +34,7 @@ const RegisterPage = () => {
     setIsSubmitting(true);
 
     try {
-      await register(firstName, lastName, email, password);
+      await register(firstName.trim(), lastName.trim(), email.trim(), password);
       navigate("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
@@ -75,7 +82,7 @@ const RegisterPage = () => {
             label="Password"
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => setPassword(removeWhitespace(e.target.value))}
             required
           />
           <TextField
@@ -83,7 +90,7 @@ const RegisterPage = () => {
             label="Confirm Password"
             type="password"
             value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+            onChange={(e) => setConfirmPassword(removeWhitespace(e.target.value))}
             required
           />
           <Button
