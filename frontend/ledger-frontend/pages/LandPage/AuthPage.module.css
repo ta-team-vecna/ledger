@@ -1,6 +1,6 @@
 :root{
   --accent-color:#415b80; 
-  --page-background-color: #f3f6fa;
+  --page-background-color: #dbe4f2;
   --card-background-color: #ffffff;
   font-family:  Roboto;
 }
@@ -27,8 +27,14 @@
 html, body {
   margin: 0;
   width: 100%;
+  min-height: 100%;
   overflow-x: hidden;
-  background-color: var(--page-background-color); 
+  background-color: var(--page-background-color);
+  background-image:
+    radial-gradient(1200px 550px at 50% -180px, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0) 72%),
+    linear-gradient(180deg, #dfe8f5 0%, #d3deef 48%, #cad7ea 100%);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }
 
 .loginCard {
