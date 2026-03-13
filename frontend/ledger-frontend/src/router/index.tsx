@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import LoginPage from '../../pages/LandPage/LoginPage';
+import RegisterPage from '../../pages/LandPage/RegisterPage';
 import Dashboard from '../../pages/Dashboard/Dashboard';
 import { ProtectedRoute, PublicRoute } from '../components/RouteGuards';
 
@@ -13,6 +14,14 @@ export const router = createBrowserRouter([
     element: (
       <PublicRoute>
         <LoginPage />
+      </PublicRoute>
+    ),
+  },
+  {
+    path: '/register',
+    element: (
+      <PublicRoute>
+        <RegisterPage />
       </PublicRoute>
     ),
   },
