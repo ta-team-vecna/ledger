@@ -1,3 +1,4 @@
+  // components/topBar/topBar.tsx
 import * as React from 'react';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
@@ -6,10 +7,20 @@ import IconButton from '@mui/material/IconButton';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import styles from './topBar.module.css';
 
-const Topbar = () => {
+interface TopbarProps {
+  isAdmin?: boolean;
+  onMenuClick?: () => void;
+  adminMenuOpen?: boolean;
+}
+
+const Topbar: React.FC<TopbarProps> = ({ 
+  isAdmin = false, 
+  onMenuClick, 
+  adminMenuOpen 
+}) => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
-  const isMobile = useMediaQuery('(max-width: 768px)');
+  const isMobile = useMediaQuery('(max-width: 450px)');
   
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -53,12 +64,25 @@ const Topbar = () => {
         </>
       ) : (
         // Desktop: Row of links
-        <>
-          <a href="/dashboard">Dashboard</a>
-          <a href="/requests">Requests</a>
-          <a href="/reports">Reports</a>
-          <a href="/admin">Admin panel</a>
-        </>
+        <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+          {/* Admin menu button - only shown in admin panel */}
+          {isAdmin && (
+            <IconButton
+              onClick={onMenuClick}
+              sx={{ color: 'white', mr: 2 }}
+            >
+              <MenuIcon />
+            </IconButton>
+          )}
+          
+          {/* Regular nav links */}
+          <div style={{ display: 'flex', gap: '20px' }}>
+            <a href="/dashboard">Dashboard</a>
+            <a href="/requests">Requests</a>
+            <a href="/reports">Reports</a>
+            <a href="/admin">Admin panel</a>
+          </div>
+        </div>
       )}
     </div>
   );
