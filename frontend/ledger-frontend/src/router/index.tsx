@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
-import { ProtectedRoute, PublicRoute } from '../components/RouteGuards';
+import { AdminRoute, ProtectedRoute, PublicRoute } from '../components/RouteGuards';
 import LoadingSpinner from '../components/LoadingSpinner';
 // ❌ REMOVE this line - it's conflicting with the lazy import below
 // import AdminPanel from '../../pages/Admin/AdminPanel';
@@ -46,9 +46,9 @@ export const router = createBrowserRouter([
   {
     path: '/admin', 
     element: withSuspense(
-      <ProtectedRoute>
+      <AdminRoute>
         <AdminPanel/>
-      </ProtectedRoute>
+      </AdminRoute>
     )
   }
 ]);
