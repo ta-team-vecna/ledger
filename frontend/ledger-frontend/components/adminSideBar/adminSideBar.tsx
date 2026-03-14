@@ -11,6 +11,7 @@ import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import Icon from '@mui/material/Icon';
+import { Link } from 'react-router-dom';  // 👈 Import Link
 
 const drawerWidth = 240;
 
@@ -31,11 +32,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
   const theme = useTheme();
 
   const menuItems = [
-    { text: 'AdminPanel ', icon: 'dashboard' },
-    { text: 'Users', icon: 'people' },
-    { text: 'Inventory', icon: 'inventory' },
-    { text: 'Requests   ', icon: 'wifi_protected_setup' },
-    { text: 'Settings', icon: 'settings' },
+    { text: 'Admin Panel', icon: 'dashboard', path: '/admin' },
+    { text: 'Users', icon: 'people', path: '/admin/users' },
+    { text: 'Inventory', icon: 'inventory', path: '/admin/inventory' },
+    { text: 'Requests', icon: 'wifi_protected_setup', path: '/admin/requests' },
+    { text: 'Settings', icon: 'settings', path: '/admin/settings' },
   ];
 
   return (
@@ -48,7 +49,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
           boxSizing: 'border-box',
         },
       }}
-      variant="temporary"  // or "persistent" depending on your need
+      variant="temporary"
       anchor="left"
       open={open}
       onClose={onClose}
@@ -62,7 +63,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ open, onClose }) => {
       <List>
         {menuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
-            <ListItemButton>
+            <ListItemButton
+              component={Link}  // 👈 Make it a Link
+              to={item.path}    // 👈 Add the path
+              onClick={onClose} // 👈 Close sidebar after navigation
+            >
               <ListItemIcon>
                 <Icon>{item.icon}</Icon>
               </ListItemIcon>
