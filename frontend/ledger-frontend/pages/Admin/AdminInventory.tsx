@@ -15,56 +15,33 @@ import Select from '@mui/material/Select';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import { Divider } from '@mui/material';
-import styles from "./AdminInventory.module.css";
+import styles from './AdminInventory.module.css';
+import { useEffect } from 'react';  
 
-// Mock data for demonstration
-const mockItems = [
-  { id: 1, category: 'Laptop', name: 'MacBook Pro 16"', assignedTo: 'Sarah Johnson', status: 'borrowed', dueDate: '2026-03-20', icon: 'laptop' },
-  { id: 2, category: 'Laptop', name: 'Dell XPS 13', assignedTo: 'None', status: 'available', dueDate: null, icon: 'laptop' },
-  { id: 3, category: 'Tablet', name: 'iPad Pro 12.9"', assignedTo: 'Prof. Chen', status: 'borrowed', dueDate: '2026-03-25', icon: 'tablet' },
-  { id: 4, category: 'Audio', name: 'Sony Headphones', assignedTo: 'Mike Chen', status: 'overdue', dueDate: '2026-03-10', icon: 'headphones' },
-  { id: 5, category: 'Lab', name: 'Microscope Set', assignedTo: 'Science Dept', status: 'reserved', dueDate: '2026-04-01', icon: 'science' },
-  { id: 6, category: 'AV', name: 'Projector', assignedTo: 'In Repair', status: 'repair', dueDate: null, icon: 'videocam' },
-  { id: 7, category: 'Laptop', name: 'Lenovo ThinkPad', assignedTo: 'None', status: 'available', dueDate: null, icon: 'laptop' },
-  { id: 8, category: 'Tablet', name: 'Samsung Tab S9', assignedTo: 'Lost', status: 'unavailable', dueDate: null, icon: 'tablet' },
-  { id: 9, category: 'Audio', name: 'AirPods Pro', assignedTo: 'Emma Wilson', status: 'borrowed', dueDate: '2026-03-18', icon: 'headphones' },
-  { id: 10, category: 'Lab', name: 'Arduino Kit', assignedTo: 'Robotics Club', status: 'borrowed', dueDate: '2026-03-30', icon: 'memory' },
-  { id: 11, category: 'Tool', name: '3D Printer', assignedTo: 'In Repair', status: 'repair', dueDate: null, icon: 'print' },
-  { id: 12, category: 'AV', name: 'Camera Kit', assignedTo: 'None', status: 'available', dueDate: null, icon: 'camera' },
-  { id: 13, category: 'Laptop', name: 'HP EliteBook', assignedTo: 'John Smith', status: 'borrowed', dueDate: '2026-03-22', icon: 'laptop' },
-  { id: 14, category: 'Tablet', name: 'Microsoft Surface', assignedTo: 'Design Dept', status: 'reserved', dueDate: '2026-04-05', icon: 'tablet' },
-  { id: 15, category: 'Audio', name: 'Conference Mic', assignedTo: 'None', status: 'available', dueDate: null, icon: 'mic' },
-];
 
 const AdminInventory = () => {
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [activeItem, setActiveItem] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [selectedItems, setSelectedItems] = useState<number[]>([]);
   const [selectMode, setSelectMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [activeItem, setActiveItem] = useState<number | null>(null);
+   const [equipment, setEquipment] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleSelectAll = () => {
-    if (selectedItems.length === mockItems.length) {
-      setSelectedItems([]);
-    } else {
-      setSelectedItems(mockItems.map(item => item.id));
-    }
+  const handleSelectItem = (id: string) => {
+  if (selectedItems.includes(id)) {
+    setSelectedItems(selectedItems.filter(itemId => itemId !== id));
+  } else {
+    setSelectedItems([...selectedItems, id]);
+  }
   };
 
-  const handleSelectItem = (id: number) => {
-    if (selectedItems.includes(id)) {
-      setSelectedItems(selectedItems.filter(itemId => itemId !== id));
-    } else {
-      setSelectedItems([...selectedItems, id]);
-    }
-  };
-
-  const handleActionClick = (event: React.MouseEvent<HTMLElement>, id: number) => {
-    setAnchorEl(event.currentTarget);
-    setActiveItem(id);
+ const handleActionClick = (event: React.MouseEvent<HTMLElement>, id: string) => {
+  setAnchorEl(event.currentTarget);
+  setActiveItem(id);
   };
 
   const handleActionClose = () => {
@@ -97,9 +74,61 @@ const AdminInventory = () => {
   };
 
   // Get unique categories for filter
-  const categories = ['all', ...new Set(mockItems.map(item => item.category))];
 
-  const filteredItems = mockItems.filter(item => {
+  useEffect(() => {
+  const fetchEquipment = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/equipment', {
+        credentials: 'include', 
+        headers: { 
+          'Content-Type': 'application/json'  
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setEquipment(data);
+    } catch (error) {
+      console.error('Failed to fetch:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  fetchEquipment();
+}, []);
+
+  // Helper to get icon based on type
+  const getIconForType = (type: string) => {
+    const icons: Record<string, string> = {
+      'Laptop': 'laptop',
+      'Tablet': 'tablet',
+      'Audio': 'headphones',
+      'Lab': 'science',
+      'AV': 'videocam',
+      'Tool': 'build'
+    };
+    return icons[type] || 'inventory';
+  };
+
+  // Map backend data to your table format
+  const mappedItems = equipment.map(item => ({
+    id: item.id,
+    category: item.type,
+    name: item.name,
+    assignedTo: item.location, // Adjust based on your needs
+    status: item.status.toLowerCase(),
+    dueDate: null, // You'll need to calculate from requests
+    icon: getIconForType(item.type)
+  }));
+
+  // Use mappedItems instead of mockItems
+  const categories = ['all', ...new Set(mappedItems.map(item => item.category))];
+
+  const filteredItems = mappedItems.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.assignedTo.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.category.toLowerCase().includes(searchTerm.toLowerCase());
@@ -107,6 +136,20 @@ const AdminInventory = () => {
     const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
     return matchesSearch && matchesStatus && matchesCategory;
   });
+
+  // Update selection handlers to use string IDs
+  const handleSelectAll = () => {
+    if (selectedItems.length === mappedItems.length) {
+      setSelectedItems([]);
+    } else {
+      setSelectedItems(mappedItems.map(item => item.id));
+    }
+  };
+
+  // Add loading state UI
+  if (loading) {
+    return <div>Loading inventory...</div>;
+  }
 
   return (
     <>
@@ -204,8 +247,8 @@ const AdminInventory = () => {
                 {selectMode && (
                   <th className={styles.checkboxCell}>
                     <Checkbox
-                      checked={selectedItems.length === mockItems.length}
-                      indeterminate={selectedItems.length > 0 && selectedItems.length < mockItems.length}
+                    checked={selectedItems.length === mappedItems.length}
+indeterminate={selectedItems.length > 0 && selectedItems.length < mappedItems.length}
                       onChange={handleSelectAll}
                     />
                   </th>
@@ -213,7 +256,7 @@ const AdminInventory = () => {
                 <th>Category</th>
                 <th>Item Name</th>
                 <th>Status</th>
-                <th>Assigned To</th>
+                <th>Location</th>
                 <th>Due Date</th>
                 <th>Actions</th>
               </tr>
@@ -279,7 +322,7 @@ const AdminInventory = () => {
                       size="small"
                       variant="outlined"
                       className={styles.actionButton}
-                      onClick={(e) => handleActionClick(e, item.id)}
+                      onClick={(e) => handleActionClick(e, item.id)}  // item.id is now string
                       endIcon={<Icon>arrow_drop_down</Icon>}
                     >
                       Change
@@ -315,7 +358,7 @@ const AdminInventory = () => {
 
         {/* Footer with counts */}
         <div className={styles.tableFooter}>
-          <span>Showing {filteredItems.length} of {mockItems.length} items</span>
+          <span>Showing {filteredItems.length} of {mappedItems.length} items</span>
           {selectedItems.length > 0 && (
             <span className={styles.selectedCount}>
               {selectedItems.length} selected
