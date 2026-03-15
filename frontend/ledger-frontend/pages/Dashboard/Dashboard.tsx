@@ -6,27 +6,9 @@ import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import Divider from '@mui/material/Divider';
 import ListItemText from '@mui/material/ListItemText';
-import { Link } from "react-router-dom";
 
 function generateItems() {
-  const items = [];
-  for (let i = 0; i < 3; i++) {
-    items.push(
-      <ListItem className={styles.InventoryQuickCardsListItem} key={`item-${i}`}>
-        <Icon className={styles.QuickCardListItemIcon}>pending</Icon>
-        <ListItemText primary="Single-line item" />
-      </ListItem>
-    );
-    // Add divider after each item except the last
-    if (i < 2) {
-      items.push(<Divider key={`divider-${i}`} component="li" />);
-    }
-    // Then add a link
-    if (i == 2){
-    items.push(<Link to="#" className={styles.InventoryQuickCardsListItemLink}>View all requests</Link>)
-    }
-  }
-  return items;
+  return [];
 }
 
 const Dashboard = () => {
@@ -120,7 +102,14 @@ const Dashboard = () => {
             <h2>RECENT REQUESTS: </h2>
             <Divider component="p" />
             <List className={styles.InventoryQuickCardsList}>
-            {generateItems()}
+            {generateItems().length === 0 ? (
+              <ListItem className={styles.InventoryQuickCardsListItem}>
+                <Icon className={styles.QuickCardListItemIcon}>info</Icon>
+                <ListItemText primary="No requests yet." />
+              </ListItem>
+            ) : (
+              generateItems()
+            )}
             </List>
                     
             </div>    
@@ -129,7 +118,14 @@ const Dashboard = () => {
             <h2>LOW STOCK ITEMS: </h2>
             <Divider component="p" />
             <List className={styles.InventoryQuickCardsList}>
-            {generateItems()}
+            {generateItems().length === 0 ? (
+              <ListItem className={styles.InventoryQuickCardsListItem}>
+                <Icon className={styles.QuickCardListItemIcon}>info</Icon>
+                <ListItemText primary="No low stock items." />
+              </ListItem>
+            ) : (
+              generateItems()
+            )}
             </List>
                     
             </div>    
