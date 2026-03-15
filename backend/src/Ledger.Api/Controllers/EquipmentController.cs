@@ -119,6 +119,23 @@ public sealed class EquipmentController : ControllerBase {
 
         return NoContent();
     }
+    
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Delete(Guid id) {
+        var entity = await _db.Equipment.FirstOrDefaultAsync(x => x.Id == id);
+        if (entity is null) {
+            return NotFound(new ProblemDetails {
+                Detail = "Equipment was not found.",
+                Status = StatusCodes.Status404NotFound,
+            });
+        }
+
+        _db.Remove(entity);
+        await _db.SaveChangesAsync();
+
+        return NoContent();
+    }
 
     private static EquipmentResponse ResponseFromEntity(Equipment x) => new(
         x.Id,
