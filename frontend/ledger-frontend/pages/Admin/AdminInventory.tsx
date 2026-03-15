@@ -39,6 +39,8 @@ const AdminInventory = () => {
   }
   };
 
+  
+
  const handleActionClick = (event: React.MouseEvent<HTMLElement>, id: string) => {
   setAnchorEl(event.currentTarget);
   setActiveItem(id);
@@ -49,29 +51,32 @@ const AdminInventory = () => {
     setActiveItem(null);
   };
 
-  const getStatusColor = (status: string) => {
-    const colors = {
-      available: '#4caf50',
-      borrowed: '#1976d2',
-      overdue: '#ff9800',
-      repair: '#9c27b0',
-      unavailable: '#f44336',
-      reserved: '#ffc107'
-    };
-    return colors[status as keyof typeof colors] || '#999';
-  };
 
-  const getStatusIcon = (status: string) => {
-    const icons = {
-      available: 'check_circle',
-      borrowed: 'sync_alt',
-      overdue: 'warning',
-      repair: 'build',
-      unavailable: 'cancel',
-      reserved: 'event'
-    };
-    return icons[status as keyof typeof icons] || 'help';
+    const getStatusColor = (status: string) => {
+  const colors: Record<string, string> = {
+    'Available': '#4caf50',
+    'Reserved': '#ffc107',
+    'CheckedOut': '#1976d2',         
+    'UnderRepair': '#9c27b0',        
+    'Retired': '#9e9e9e',             
+    'Overdue': '#ff9800',
+    'Unavailable': '#f44336'
   };
+  return colors[status] || '#999';
+};
+
+ const getStatusIcon = (status: string) => {
+  const icons: Record<string, string> = {
+    'Available': 'check_circle',     
+    'Reserved': 'event',
+    'CheckedOut': 'sync_alt',        
+    'UnderRepair': 'build',          
+    'Retired': 'delete_forever',
+    'Overdue': 'warning',               
+    'Unavailable': 'cancel'
+  };
+  return icons[status] || 'help';
+};
 
   // Get unique categories for filter
 
@@ -101,6 +106,29 @@ const AdminInventory = () => {
   fetchEquipment();
 }, []);
 
+
+const fetchEquipment = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/equipment', {
+        credentials: 'include', 
+        headers: { 
+          'Content-Type': 'application/json'  
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      setEquipment(data);
+    } catch (error) {
+      console.error('Failed to fetch:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   // Helper to get icon based on type
   const getIconForType = (type: string) => {
     const icons: Record<string, string> = {
@@ -114,13 +142,64 @@ const AdminInventory = () => {
     return icons[type] || 'inventory';
   };
 
+const handleAction = async (action: string, itemId: string | null) => {
+  if (!itemId) return;
+  
+  let statusNumber = 0;
+  
+  switch(action) {
+    case 'available':
+      statusNumber = 0;  // Available
+      break;
+    case 'reserved':
+      statusNumber = 1;  // Reserved
+      break;
+    case 'borrow':
+      statusNumber = 2;  // CheckedOut
+      break;
+    case 'repair':
+      statusNumber = 3;  // UnderRepair
+      break;
+    case 'retired':
+      statusNumber = 4;  // Retired
+      break;
+    default:
+      return;
+  }
+  
+  try {
+    const response = await fetch(`http://localhost:3001/api/equipment/${itemId}`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: statusNumber })  // 👈 Send number!
+    });
+    
+    if (response.ok) {
+      const fetchResponse = await fetch('http://localhost:3001/api/equipment', {
+        credentials: 'include'
+      });
+      const data = await fetchResponse.json();
+      setEquipment(data);
+    } else {
+      const errorData = await response.json();
+      console.error('Update failed:', errorData);
+    }
+  } catch (error) {
+    console.error('Failed to update status:', error);
+  }
+  
+  handleActionClose();
+};
+
+
   // Map backend data to your table format
   const mappedItems = equipment.map(item => ({
     id: item.id,
     category: item.type,
     name: item.name,
     assignedTo: item.location, // Adjust based on your needs
-    status: item.status.toLowerCase(),
+    status: item.status,
     dueDate: null, // You'll need to calculate from requests
     icon: getIconForType(item.type)
   }));
@@ -256,7 +335,7 @@ indeterminate={selectedItems.length > 0 && selectedItems.length < mappedItems.le
                 <th>Category</th>
                 <th>Item Name</th>
                 <th>Status</th>
-                <th>Location</th>
+                <th>Location  </th>
                 <th>Due Date</th>
                 <th>Actions</th>
               </tr>
@@ -281,16 +360,16 @@ indeterminate={selectedItems.length > 0 && selectedItems.length < mappedItems.le
                   <td className={styles.itemName}>{item.name}</td>
                   <td>
                     <Chip
-                      icon={<Icon className={styles.statusIcon}>{getStatusIcon(item.status)}</Icon>}
-                      label={item.status.toUpperCase()}
-                      size="small"
-                      className={styles.statusChip}
-                      style={{
-                        backgroundColor: `${getStatusColor(item.status)}20`,
-                        color: getStatusColor(item.status),
-                        borderColor: getStatusColor(item.status)
-                      }}
-                    />
+                    icon={<Icon className={styles.statusIcon}>{getStatusIcon(item.status)}</Icon>}
+                    label={item.status.toUpperCase()}  // 👈 This is correct
+                    size="small"
+                    className={styles.statusChip}
+                    style={{
+                      backgroundColor: `${getStatusColor(item.status)}20`,
+                      color: getStatusColor(item.status),
+                      borderColor: getStatusColor(item.status)
+                    }}  
+                  />
                   </td>
                   <td>
                     <div className={styles.assignedCell}>
@@ -319,35 +398,34 @@ indeterminate={selectedItems.length > 0 && selectedItems.length < mappedItems.le
                   </td>
                   <td>
                     <Button
-                      size="small"
-                      variant="outlined"
-                      className={styles.actionButton}
-                      onClick={(e) => handleActionClick(e, item.id)}  // item.id is now string
-                      endIcon={<Icon>arrow_drop_down</Icon>}
-                    >
-                      Change
-                    </Button>
-                    <Menu
-                      anchorEl={anchorEl}
-                      open={activeItem === item.id}
-                      onClose={handleActionClose}
-                    >
-                      <MenuItem onClick={handleActionClose}>
-                        <Icon className={styles.menuIcon}>sync_alt</Icon> Mark Borrowed
-                      </MenuItem>
-                      <MenuItem onClick={handleActionClose}>
-                        <Icon className={styles.menuIcon}>check_circle</Icon> Mark Available
-                      </MenuItem>
-                      <MenuItem onClick={handleActionClose}>
-                        <Icon className={styles.menuIcon}>build</Icon> Mark In Repair
-                      </MenuItem>
-                      <MenuItem onClick={handleActionClose}>
-                        <Icon className={styles.menuIcon}>event</Icon> Reserve
-                      </MenuItem>
-                      <Divider />
-                      <MenuItem onClick={handleActionClose} className={styles.deleteMenuItem}>
-                        <Icon className={styles.menuIcon}>delete</Icon> Delete
-                      </MenuItem>
+  size="small"
+  variant="outlined"
+  className={styles.actionButton}
+  onClick={(e) => handleActionClick(e, item.id)}
+  endIcon={<Icon>arrow_drop_down</Icon>}
+                  >
+                    Change
+                  </Button>
+                  <Menu
+                    anchorEl={anchorEl}
+                    open={activeItem === item.id}
+                    onClose={handleActionClose}
+                  >
+                    <MenuItem onClick={() => handleAction('borrow', activeItem)}>
+                  <Icon className={styles.menuIcon}>sync_alt</Icon> Mark Borrowed
+                </MenuItem>
+                <MenuItem onClick={() => handleAction('available', activeItem)}>
+                  <Icon className={styles.menuIcon}>check_circle</Icon> Mark Available
+                </MenuItem>
+                <MenuItem onClick={() => handleAction('repair', activeItem)}>
+                  <Icon className={styles.menuIcon}>build</Icon> Mark In Repair
+                </MenuItem>
+                <MenuItem onClick={() => handleAction('reserved', activeItem)}>
+                  <Icon className={styles.menuIcon}>event</Icon> Reserve
+                </MenuItem>
+                <MenuItem onClick={() => handleAction('retired', activeItem)}>
+                  <Icon className={styles.menuIcon}>delete_forever</Icon> Retire
+                </MenuItem>
                     </Menu>
                   </td>
                 </tr>
