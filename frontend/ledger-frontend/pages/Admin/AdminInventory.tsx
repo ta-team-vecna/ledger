@@ -17,9 +17,10 @@ import InputLabel from '@mui/material/InputLabel';
 import { Divider } from '@mui/material';
 import styles from './AdminInventory.module.css';
 import { useEffect } from 'react';  
-
+import AddItemModal from '../../components/Admin/addItemModal';
 
 const AdminInventory = () => {
+  const [addModalOpen, setAddModalOpen] = useState(false);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [activeItem, setActiveItem] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -243,12 +244,13 @@ const handleAction = async (action: string, itemId: string | null) => {
         <div className={styles.controlsBar}>
           <div className={styles.controlsLeft}>
             <Button 
-              variant="contained" 
-              className={styles.addButton}
-              startIcon={<Icon>add</Icon>}
-            >
-              Add New Item
-            </Button>
+  variant="contained" 
+  className={styles.addButton}
+  startIcon={<Icon>add</Icon>}
+  onClick={() => setAddModalOpen(true)}
+>
+  Add New Item
+</Button>
             
             <Button 
               variant="outlined" 
@@ -430,6 +432,7 @@ indeterminate={selectedItems.length > 0 && selectedItems.length < mappedItems.le
                   </td>
                 </tr>
               ))}
+              
             </tbody>
           </table>
         </div>
@@ -444,6 +447,12 @@ indeterminate={selectedItems.length > 0 && selectedItems.length < mappedItems.le
           )}
         </div>
       </div>
+      <AddItemModal
+  open={addModalOpen}
+  onClose={() => setAddModalOpen(false)}
+  onItemAdded={fetchEquipment}  // Refresh the list after adding
+  token={localStorage.getItem('token') || ''}
+/>
     </>
   );
 };
