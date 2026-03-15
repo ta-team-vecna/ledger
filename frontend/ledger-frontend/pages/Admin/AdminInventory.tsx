@@ -40,7 +40,18 @@ const AdminInventory = () => {
   }
   };
 
-  
+  const formatStatus = (status: string) => {
+  const statusMap: Record<string, string> = {
+    'CheckedOut': 'Checked Out',
+    'UnderRepair': 'Under Repair',
+    'Available': 'Available',
+    'Reserved': 'Reserved',
+    'Retired': 'Retired',
+    'Overdue': 'Overdue',
+    'Unavailable': 'Unavailable'
+  };
+  return statusMap[status] || status;
+};
 
  const handleActionClick = (event: React.MouseEvent<HTMLElement>, id: string) => {
   setAnchorEl(event.currentTarget);
@@ -361,17 +372,17 @@ indeterminate={selectedItems.length > 0 && selectedItems.length < mappedItems.le
                   </td>
                   <td className={styles.itemName}>{item.name}</td>
                   <td>
-                    <Chip
-                    icon={<Icon className={styles.statusIcon}>{getStatusIcon(item.status)}</Icon>}
-                    label={item.status.toUpperCase()}  // 👈 This is correct
-                    size="small"
-                    className={styles.statusChip}
-                    style={{
-                      backgroundColor: `${getStatusColor(item.status)}20`,
-                      color: getStatusColor(item.status),
-                      borderColor: getStatusColor(item.status)
-                    }}  
-                  />
+                 <Chip
+  icon={<Icon className={styles.statusIcon}>{getStatusIcon(item.status)}</Icon>}
+  label={formatStatus(item.status).toUpperCase()}
+  size="small"
+  className={styles.statusChip}
+  style={{
+    backgroundColor: `${getStatusColor(item.status)}20`,
+    color: getStatusColor(item.status),
+    borderColor: getStatusColor(item.status)
+  }}
+/>
                   </td>
                   <td>
                     <div className={styles.assignedCell}>
