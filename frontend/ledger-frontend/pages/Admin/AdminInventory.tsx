@@ -18,6 +18,11 @@ import { Divider } from '@mui/material';
 import styles from './AdminInventory.module.css';
 import { useEffect } from 'react';  
 import AddItemModal from '../../components/Admin/addItemModal';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import CircularProgress from '@mui/material/CircularProgress';
 
 const AdminInventory = () => {
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -29,8 +34,11 @@ const AdminInventory = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-   const [equipment, setEquipment] = useState<any[]>([]);
+  const [equipment, setEquipment] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
 
   const handleSelectItem = (id: string) => {
   if (selectedItems.includes(id)) {
@@ -118,6 +126,47 @@ const AdminInventory = () => {
   fetchEquipment();
 }, []);
 
+
+const handleDeleteSelected = async () => {
+  if (selectedItems.length === 0) return;
+  
+  setDeleting(true);
+  
+  try {
+    // Delete each selected item
+    const deletePromises = selectedItems.map(id => 
+      fetch(`http://localhost:3001/api/equipment/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      })
+    );
+    
+    const results = await Promise.all(deletePromises);
+    
+    // Check if any deletions failed
+    const failed = results.filter(r => !r.ok);
+    if (failed.length > 0) {
+      console.error(`${failed.length} items failed to delete`);
+      // You might want to show a warning here
+    }
+    
+    // Refresh the equipment list
+    await fetchEquipment();
+    
+    // Clear selection and exit select mode
+    setSelectedItems([]);
+    setSelectMode(false);
+    setDeleteConfirmOpen(false);
+    
+  } catch (error) {
+    console.error('Failed to delete items:', error);
+  } finally {
+    setDeleting(false);
+  }
+};
 
 const fetchEquipment = async () => {
     try {
@@ -264,12 +313,13 @@ const handleAction = async (action: string, itemId: string | null) => {
 </Button>
             
             <Button 
-              variant="outlined" 
-              className={styles.deleteButton}
-              startIcon={<Icon>delete</Icon>}
-              disabled={selectedItems.length === 0}
-            >
-              Delete ({selectedItems.length})
+                variant="outlined" 
+                className={styles.deleteButton}
+                startIcon={<Icon>delete</Icon>}
+                disabled={selectedItems.length === 0}
+                onClick={() => setDeleteConfirmOpen(true)}
+              >
+                Delete ({selectedItems.length})
             </Button>
 
             <Button 
@@ -464,6 +514,36 @@ indeterminate={selectedItems.length > 0 && selectedItems.length < mappedItems.le
   onItemAdded={fetchEquipment}  // Refresh the list after adding
   token={localStorage.getItem('token') || ''}
 />
+          <Dialog
+  open={deleteConfirmOpen}
+  onClose={() => !deleting && setDeleteConfirmOpen(false)}
+>
+  <DialogTitle>Confirm Delete</DialogTitle>
+  <DialogContent>
+    <p>Are you sure you want to delete {selectedItems.length} selected item{selectedItems.length !== 1 ? 's' : ''}?</p>
+    <p style={{ color: '#f44336', fontSize: '0.9em', marginTop: '10px' }}>
+      <Icon style={{ fontSize: '16px', verticalAlign: 'middle', marginRight: '5px' }}>warning</Icon>
+      This action cannot be undone.
+    </p>
+  </DialogContent>
+  <DialogActions>
+    <Button 
+      onClick={() => setDeleteConfirmOpen(false)} 
+      disabled={deleting}
+    >
+      Cancel
+    </Button>
+    <Button 
+      onClick={handleDeleteSelected} 
+      color="error" 
+      variant="contained"
+      disabled={deleting}
+      startIcon={deleting ? <CircularProgress size={20} /> : <Icon>delete</Icon>}
+    >
+      {deleting ? 'Deleting...' : 'Delete'}
+    </Button>
+  </DialogActions>
+</Dialog>
     </>
   );
 };
