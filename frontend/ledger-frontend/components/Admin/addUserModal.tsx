@@ -1,5 +1,4 @@
-// components/Admin/AddUserModal.tsx
-import { useState } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -10,7 +9,13 @@ import {
   CircularProgress,
   Alert,
   IconButton,
-  InputAdornment
+  InputAdornment,
+  FormControl,
+  InputLabel,
+  Select,
+  type SelectChangeEvent, 
+  MenuItem,
+  FormHelperText
 } from '@mui/material';
 import Icon from '@mui/material/Icon';
 import styles from './addUserModal.module.css';
@@ -26,7 +31,8 @@ const AddUserModal = ({ open, onClose, onUserAdded }: AddUserModalProps) => {
     firstName: '',
     lastName: '',
     email: '',
-    password: ''
+    password: '',
+    role: 0  // 0 = User, 1 = Admin
   });
   
   const [showPassword, setShowPassword] = useState(false);
@@ -61,10 +67,20 @@ const AddUserModal = ({ open, onClose, onUserAdded }: AddUserModalProps) => {
     return Object.keys(errors).length === 0;
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handler for text fields
+  const handleTextChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    // Clear field error when user starts typing
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  // Handler for select field
+  const handleSelectChange = (e: SelectChangeEvent<number>) => {
+    const name = e.target.name as string;
+    const value = e.target.value as number;
+    setFormData(prev => ({ ...prev, [name]: value }));
     if (fieldErrors[name]) {
       setFieldErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -79,11 +95,14 @@ const AddUserModal = ({ open, onClose, onUserAdded }: AddUserModalProps) => {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:3001/api/auth/register', {
+      const token = localStorage.getItem('token');
+
+      const response = await fetch('http://localhost:3001/api/users', {
         method: 'POST',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(formData)
       });
@@ -91,9 +110,7 @@ const AddUserModal = ({ open, onClose, onUserAdded }: AddUserModalProps) => {
       const data = await response.json();
 
       if (!response.ok) {
-        // Handle specific error messages from backend
         if (data.errors) {
-          // If backend returns validation errors
           const backendErrors: Record<string, string> = {};
           Object.keys(data.errors).forEach(key => {
             backendErrors[key.toLowerCase()] = data.errors[key][0];
@@ -105,12 +122,12 @@ const AddUserModal = ({ open, onClose, onUserAdded }: AddUserModalProps) => {
         }
       }
 
-      // Reset form on success
       setFormData({
         firstName: '',
         lastName: '',
         email: '',
-        password: ''
+        password: '',
+        role: 0
       });
       
       onUserAdded();
@@ -128,7 +145,8 @@ const AddUserModal = ({ open, onClose, onUserAdded }: AddUserModalProps) => {
         firstName: '',
         lastName: '',
         email: '',
-        password: ''
+        password: '',
+        role: 0
       });
       setFieldErrors({});
       setError(null);
@@ -165,7 +183,7 @@ const AddUserModal = ({ open, onClose, onUserAdded }: AddUserModalProps) => {
           fullWidth
           variant="outlined"
           value={formData.firstName}
-          onChange={handleChange}
+          onChange={handleTextChange}
           disabled={loading}
           error={!!fieldErrors.firstName}
           helperText={fieldErrors.firstName}
@@ -180,7 +198,7 @@ const AddUserModal = ({ open, onClose, onUserAdded }: AddUserModalProps) => {
           fullWidth
           variant="outlined"
           value={formData.lastName}
-          onChange={handleChange}
+          onChange={handleTextChange} 
           disabled={loading}
           error={!!fieldErrors.lastName}
           helperText={fieldErrors.lastName}
@@ -195,7 +213,7 @@ const AddUserModal = ({ open, onClose, onUserAdded }: AddUserModalProps) => {
           fullWidth
           variant="outlined"
           value={formData.email}
-          onChange={handleChange}
+          onChange={handleTextChange}  
           disabled={loading}
           error={!!fieldErrors.email}
           helperText={fieldErrors.email}
@@ -210,7 +228,7 @@ const AddUserModal = ({ open, onClose, onUserAdded }: AddUserModalProps) => {
           fullWidth
           variant="outlined"
           value={formData.password}
-          onChange={handleChange}
+          onChange={handleTextChange} 
           disabled={loading}
           error={!!fieldErrors.password}
           helperText={fieldErrors.password || 'Minimum 6 characters'}
@@ -229,6 +247,21 @@ const AddUserModal = ({ open, onClose, onUserAdded }: AddUserModalProps) => {
             )
           }}
         />
+
+        <FormControl fullWidth margin="dense" className={styles.field}>
+          <InputLabel>Role</InputLabel>
+          <Select
+            name="role"
+            value={formData.role}
+            label="Role"
+            onChange={handleSelectChange} 
+            disabled={loading}
+          >
+            <MenuItem value={0}>User</MenuItem>
+            <MenuItem value={1}>Admin</MenuItem>
+          </Select>
+          <FormHelperText>Select user role</FormHelperText>
+        </FormControl>
       </DialogContent>
 
       <DialogActions className={styles.actions}>

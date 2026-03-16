@@ -29,9 +29,7 @@ const AdminUsers = () => {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [selectMode, setSelectMode] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
-
-    useEffect(() => {
-  const fetchUsers = async () => {
+const fetchUsers = async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('http://localhost:3001/api/users', {
@@ -65,6 +63,8 @@ const AdminUsers = () => {
     }
   };
 
+    useEffect(() => {
+  
   fetchUsers();
 }, []);
 
@@ -277,15 +277,15 @@ const AdminUsers = () => {
       </div>
 
       {/* Add User Modal */}
-      <AddUserModal
-        open={addModalOpen}
-        onClose={() => setAddModalOpen(false)}
-        onUserAdded={() => {
-          // TODO: Refresh user list when backend is ready
-          console.log('User added, refresh list');
-          setAddModalOpen(false);
-        }}
-      />
+        <AddUserModal
+      open={addModalOpen}
+      onClose={() => setAddModalOpen(false)}
+      onUserAdded={() => {
+        console.log('User added, refresh list');
+        fetchUsers();  
+        setAddModalOpen(false);
+      }}
+    />
     </>
   );
 };
