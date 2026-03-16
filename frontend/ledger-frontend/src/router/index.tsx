@@ -1,7 +1,9 @@
 import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
-import { ProtectedRoute, PublicRoute } from '../components/RouteGuards';
+import { AdminRoute, ProtectedRoute, PublicRoute } from '../components/RouteGuards';
 import LoadingSpinner from '../components/LoadingSpinner';
+// ❌ REMOVE this line - it's conflicting with the lazy import below
+// import AdminPanel from '../../pages/Admin/AdminPanel';
 
 const LoginPage = lazy(() => import('../../pages/LandPage/LoginPage'));
 const RegisterPage = lazy(() => import('../../pages/LandPage/RegisterPage'));

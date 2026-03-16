@@ -1,6 +1,6 @@
 
 // AdminPanel.tsx - Fixed layout
-import { useState } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import Topbar from "../../components/topBar/topBar";
 import AdminSidebar from '../../components/adminSideBar/adminSideBar';
 import { Divider } from '@mui/material';
@@ -13,8 +13,18 @@ import Chip from '@mui/material/Chip';
 import Avatar from '@mui/material/Avatar';
 import Tooltip from '@mui/material/Tooltip';
 
+const API_BASE = "http://localhost:3001";
+
 const AdminPanel = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [totalItems, setTotalItems] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/equipment`, { credentials: "include" })
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then((data: unknown[]) => setTotalItems(data.length))
+      .catch(() => setTotalItems(null));
+  }, []);
   const [actionFilter, setActionFilter] = useState('all');
   const [actionLimit, setActionLimit] = useState(25);
   const [requestFilter, setRequestFilter] = useState('all');
@@ -89,7 +99,7 @@ const AdminPanel = () => {
               <span className={styles.statLabel}>
                 <Icon className={styles.statIcon}>inventory</Icon> Total Items:
               </span>
-              <span className={styles.statValue}>—</span>
+              <span className={styles.statValue}>{totalItems ?? "—"}</span>
             </div>
             <div className={styles.statItem}>
               <span className={styles.statLabel}>
@@ -196,6 +206,9 @@ const AdminPanel = () => {
         
         {/* Scrollable Requests List */}
         <div className={styles.requestList}>
+          {generateRequests(requestFilter, requestLimit).length === 0 && (
+            <div className={styles.emptyState}>No requests yet.</div>
+          )}
           {generateRequests(requestFilter, requestLimit).map((request, index) => (
             <div key={index} className={`${styles.requestItem} ${styles[request.status]}`}>
               <div className={styles.requestHeader}>
@@ -383,6 +396,9 @@ const AdminPanel = () => {
         
         {/* Scrollable Action List */}
         <div className={styles.actionList}>
+          {generateActions(actionFilter, actionLimit).length === 0 && (
+            <div className={styles.emptyState}>No actions yet.</div>
+          )}
           {generateActions(actionFilter, actionLimit).map((action, index) => (
             <div key={index} className={`${styles.actionItem} ${styles[action.type]}`}>
               <div className={styles.actionIcon}>
@@ -404,169 +420,7 @@ const AdminPanel = () => {
       </div>
     </div>
 
-    {/* Row 2, Col 2: Empty Slot for Future Content */}
-    <div className={styles.gridCell}>   
-
-{/* Admin Messaging - Row 2, Col 2 */}
-<div className={styles.gridCell}>
-  <div className={styles.quickStats}>
-    <div className={styles.quickStatsHeading}>
-      <h2>MESSAGING</h2>
-    </div>
-    <Divider />
-    
-    {/* Recipient Selection */}
-    <div className={styles.messageSection}>
-      <div className={styles.recipientTabs}>
-        <Button 
-          size="small" 
-          variant="contained" 
-          className={styles.tabButton}
-        >
-          Single
-        </Button>
-        <Button 
-          size="small" 
-          variant="outlined" 
-          className={styles.tabButton}
-        >
-          Multiple
-        </Button>
-        <Button 
-          size="small" 
-          variant="outlined" 
-          className={styles.tabButton}
-        >
-          All Users
-        </Button>
-      </div>
-      
-      {/* Single User Selection */}
-      <div className={styles.userSelector}>
-        <div className={styles.inputWithIcon}>
-          <Icon className={styles.inputIcon}>search</Icon>
-          <input 
-            type="text" 
-            placeholder="Search users..." 
-            className={styles.messageInput}
-          />
-        </div>
-        
-        {/* Recent users preview */}
-        <div className={styles.recentUsers}>
-          <span className={styles.recentLabel}>Recent:</span>
-          <div className={styles.userChips}>
-            <Chip 
-              avatar={<Avatar>JD</Avatar>}
-              label="John Doe" 
-              size="small" 
-              className={styles.userChip}
-            />
-            <Chip 
-              avatar={<Avatar>JS</Avatar>}
-              label="Jane Smith" 
-              size="small" 
-              className={styles.userChip}
-            />
-            <Chip 
-              avatar={<Avatar>MB</Avatar>}
-              label="Mike Brown" 
-              size="small" 
-              className={styles.userChip}
-            />
-          </div>
-        </div>
-      </div>
-      
-      {/* Multiple Users - Comma separated (hidden by default, shown when Multiple tab active) */}
-      <div className={styles.multipleUsers} style={{ display: 'none' }}>
-        <div className={styles.inputWithIcon}>
-          <Icon className={styles.inputIcon}>email</Icon>
-          <input 
-            type="text" 
-            placeholder="Enter emails (comma separated)..." 
-            className={styles.messageInput}
-          />
-        </div>
-        <div className={styles.emailPreview}>
-          <small>Example: user1@school.edu, user2@school.edu</small>
-        </div>
-      </div>
-    </div>
-    
-    {/* Message Input */}
-    <div className={styles.messageSection}>
-      <h3>Message</h3>
-      <textarea 
-        placeholder="Type your message here..." 
-        className={styles.messageTextarea}
-        rows={3}
-      />
-      
-      {/* Urgent Toggle */}
-      <div className={styles.urgentToggle}>
-        <label className={styles.checkboxLabel}>
-          <input type="checkbox" className={styles.urgentCheckbox} />
-          <span className={styles.urgentText}>Mark as urgent</span>
-          <Chip 
-            label="URGENT" 
-            size="small" 
-            className={styles.urgentChip}
-            icon={<Icon className={styles.urgentIcon}>priority_high</Icon>}
-          />
-        </label>
-      </div>
-      
-      {/* Character count (visual only) */}
-      <div className={styles.charCount}>
-        <span>0/500</span>
-      </div>
-    </div>
-    
-    {/* Action Buttons */}
-    <div className={styles.messageActions}>
-      <Button 
-        variant="contained" 
-        className={styles.sendButton}
-        startIcon={<Icon>send</Icon>}
-      >
-        Send Message
-      </Button>
-      <Button 
-        variant="outlined" 
-        className={styles.previewButton}
-        startIcon={<Icon>visibility</Icon>}
-      >
-        Preview
-      </Button>
-      <Button 
-        variant="text" 
-        className={styles.clearButton}
-        startIcon={<Icon>clear</Icon>}
-      >
-        Clear
-      </Button>
-    </div>
-    
-    {/* Quick Stats Preview (visual only) */}
-    <div className={styles.messageStats}>
-      <div className={styles.statPill}>
-        <Icon className={styles.statPillIcon}>people</Icon>
-        <span>247 users</span>
-      </div>
-      <div className={styles.statPill}>
-        <Icon className={styles.statPillIcon}>schedule</Icon>
-        <span>12 online now</span>
-      </div>
-      <Divider orientation="vertical" flexItem />
-      <div className={styles.statPill}>
-        <Icon className={styles.statPillIcon}>warning</Icon>
-        <span>3 urgent</span>
-      </div>
-    </div>
-  </div>
-</div>
-    </div>
+    <div className={styles.gridCell}></div>
   </div>
 </div>
     </>
@@ -576,201 +430,26 @@ const AdminPanel = () => {
 
 // Place this before your component or in a separate file
 const generateActions = (filter: string, limit: number) => {
-  const allActions = [
-    // Borrow events
-    { type: 'borrow', icon: <Icon className={styles.actionIcon}>sync_alt</Icon>, text: 'Sarah Johnson borrowed MacBook Pro (2 weeks)', timeAgo: '2 min ago', urgent: false },
-    { type: 'borrow', icon: <Icon className={styles.actionIcon}>headphones</Icon>, text: 'Mike Chen borrowed Sony WH-1000XM4', timeAgo: '15 min ago', urgent: false },
-    { type: 'borrow', icon: <Icon className={styles.actionIcon}>keyboard</Icon>, text: 'Alex Rodriguez borrowed Mechanical Keyboard', timeAgo: '1 hour ago', urgent: false },
-    { type: 'borrow', icon: <Icon className={styles.actionIcon}>tablet</Icon>, text: 'Emma Wilson borrowed iPad Pro + Pencil', timeAgo: '3 hours ago', urgent: false },
-    
-    // Return events
-    { type: 'return', icon: <Icon className={styles.actionIcon}>assignment_return</Icon>, text: 'David Kim returned Dell XPS 13', timeAgo: '5 min ago', urgent: false },
-    { type: 'return', icon: <Icon className={styles.actionIcon}>check_circle</Icon>, text: 'Lisa Park returned Graphing Calculator', timeAgo: '25 min ago', urgent: false },
-    { type: 'return', icon: <Icon className={styles.actionIcon}>power</Icon>, text: 'James Wilson returned Portable Charger', timeAgo: '2 hours ago', urgent: false },
-    
-    // Request events
-    { type: 'request', icon: <Icon className={styles.actionIcon}>pending</Icon>, text: 'Tomás García requested Arduino Kit (pending approval)', timeAgo: '10 min ago', urgent: false },
-    { type: 'request', icon: <Icon className={styles.actionIcon}>check</Icon>, text: 'Nina Patel\'s request for 3D Printer APPROVED', timeAgo: '30 min ago', urgent: false },
-    { type: 'request', icon: <Icon className={styles.actionIcon}>close</Icon>, text: 'John Smith\'s request for Drone DENIED', timeAgo: '1 hour ago', urgent: false },
-    { type: 'request', icon: <Icon className={styles.actionIcon}>warning</Icon>, text: 'URGENT: Maria Garcia\'s request for Microscope ignored for 2 days!', timeAgo: '2 days ago', urgent: true },
-    { type: 'request', icon: <Icon className={styles.actionIcon}>schedule</Icon>, text: 'Robert Chen\'s request for VR Headset pending (24h+)', timeAgo: '1 day ago', urgent: true },
-    
-    // Admin events
-    { type: 'admin', icon: <Icon className={styles.actionIcon}>add_box</Icon>, text: 'Admin added 5 new HP Laptops to inventory', timeAgo: '45 min ago', urgent: false },
-    { type: 'admin', icon: <Icon className={styles.actionIcon}>delete</Icon>, text: 'Admin removed damaged projector from inventory', timeAgo: '3 hours ago', urgent: false },
-    { type: 'admin', icon: <Icon className={styles.actionIcon}>update</Icon>, text: 'System: Inventory count updated (12 items changed)', timeAgo: '5 hours ago', urgent: false },
-    { type: 'admin', icon: <Icon className={styles.actionIcon}>people</Icon>, text: 'New user registered: Dr. Elizabeth Warren (Teacher)', timeAgo: '1 day ago', urgent: false },
-    
-    // Assignment events
-    { type: 'borrow', icon: <Icon className={styles.actionIcon}>assignment_ind</Icon>, text: 'Laptop #42 assigned to Prof. Anderson (long-term)', timeAgo: '2 days ago', urgent: false },
-    { type: 'return', icon: <Icon className={styles.actionIcon}>assignment_turned_in</Icon>, text: 'Tablet #17 returned from Student Council', timeAgo: '4 hours ago', urgent: false },
-    
-    // Low stock alerts
-    { type: 'admin', icon: <Icon className={styles.actionIcon}>inventory</Icon>, text: 'LOW STOCK: Only 3 headphones remaining', timeAgo: '30 min ago', urgent: true },
-    { type: 'admin', icon: <Icon className={styles.actionIcon}>warning</Icon>, text: 'CRITICAL: No more Arduino kits available', timeAgo: '1 hour ago', urgent: true },
-    
-    // Overdue items
-    { type: 'borrow', icon: <Icon className={styles.actionIcon}>error</Icon>, text: 'OVERDUE: Camera kit (#C-204) due yesterday from Mark', timeAgo: '1 day ago', urgent: true },
-    { type: 'borrow', icon: <Icon className={styles.actionIcon}>error_outline</Icon>, text: 'OVERDUE: Microscope due 3 days ago from Science Dept', timeAgo: '3 days ago', urgent: true },
-    
-    // Maintenance
-    { type: 'admin', icon: <Icon className={styles.actionIcon}>build</Icon>, text: '5 laptops sent for maintenance', timeAgo: '2 hours ago', urgent: false },
-    { type: 'admin', icon: <Icon className={styles.actionIcon}>verified</Icon>, text: '3 items returned from repair', timeAgo: '1 day ago', urgent: false },
-    
-    // Reservations
-    { type: 'request', icon: <Icon className={styles.actionIcon}>event</Icon>, text: 'Conference room booked with projector for Friday', timeAgo: '2 hours ago', urgent: false },
-    { type: 'request', icon: <Icon className={styles.actionIcon}>event_available</Icon>, text: 'VR lab reserved for CS50 class (20 students)', timeAgo: '3 hours ago', urgent: false },
-  ];
+  const allActions: Array<{ type: string; icon: ReactNode; text: string; timeAgo: string; urgent: boolean }> = [];
 
   // Filter actions
-  let filtered = filter === 'all' ? allActions : allActions.filter(a => a.type === filter);
+  const filtered = filter === 'all' ? allActions : allActions.filter(a => a.type === filter);
   
   // Apply limit and return
   return filtered.slice(0, limit);
 };
 
 const generateRequests = (filter: string, limit: number) => {
-  const allRequests = [
-    // Pending requests
-    { 
-      user: 'Sarah Johnson', 
-      role: 'Student', 
-      item: 'MacBook Pro 16"', 
-      quantity: 1,
-      duration: '2 weeks',
-      timeAgo: '5 min ago',
-      status: 'pending',
-      urgent: false
-    },
-    { 
-      user: 'Prof. David Chen', 
-      role: 'Teacher', 
-      item: 'Projector + Screen', 
-      quantity: 1,
-      duration: '3 hours',
-      timeAgo: '15 min ago',
-      status: 'pending',
-      urgent: false
-    },
-    { 
-      user: 'Maria Garcia', 
-      role: 'Student', 
-      item: 'iPad Pro + Pencil', 
-      quantity: 1,
-      duration: '1 week',
-      timeAgo: '45 min ago',
-      status: 'pending',
-      urgent: false
-    },
-    { 
-      user: 'James Wilson', 
-      role: 'Teacher', 
-      item: '3D Printer', 
-      quantity: 1,
-      duration: '3 days',
-      timeAgo: '2 hours ago',
-      status: 'pending',
-      urgent: false
-    },
-    { 
-      user: 'Emma Thompson', 
-      role: 'Student', 
-      item: 'Arduino Starter Kit', 
-      quantity: 2,
-      duration: '2 weeks',
-      timeAgo: '3 hours ago',
-      status: 'pending',
-      urgent: false
-    },
-    
-    // Approved requests
-    { 
-      user: 'Michael Brown', 
-      role: 'Student', 
-      item: 'Sony Headphones', 
-      quantity: 1,
-      duration: '1 month',
-      timeAgo: '1 hour ago',
-      status: 'approved',
-      urgent: false
-    },
-    { 
-      user: 'Dr. Lisa Park', 
-      role: 'Teacher', 
-      item: 'Microscope Set', 
-      quantity: 3,
-      duration: '1 week',
-      timeAgo: '3 hours ago',
-      status: 'approved',
-      urgent: false
-    },
-    
-    // Denied requests
-    { 
-      user: 'Robert Martinez', 
-      role: 'Student', 
-      item: 'Drone', 
-      quantity: 1,
-      duration: '1 day',
-      timeAgo: '2 hours ago',
-      status: 'denied',
-      urgent: false
-    },
-    
-    // Overdue/Pending long time
-    { 
-      user: 'Thomas Anderson', 
-      role: 'Student', 
-      item: 'VR Headset', 
-      quantity: 1,
-      duration: '1 week',
-      timeAgo: '3 days ago',
-      status: 'pending',
-      urgent: true
-    },
-    { 
-      user: 'Prof. Sarah Williams', 
-      role: 'Teacher', 
-      item: 'Digital Camera Kit', 
-      quantity: 2,
-      duration: '1 month',
-      timeAgo: '4 days ago',
-      status: 'pending',
-      urgent: true
-    },
-    
-    // More pending
-    { 
-      user: 'Alex Rodriguez', 
-      role: 'Student', 
-      item: 'Mechanical Keyboard', 
-      quantity: 1,
-      duration: '1 semester',
-      timeAgo: '5 hours ago',
-      status: 'pending',
-      urgent: false
-    },
-    { 
-      user: 'Nina Patel', 
-      role: 'Student', 
-      item: 'Graphics Tablet', 
-      quantity: 1,
-      duration: '2 weeks',
-      timeAgo: '6 hours ago',
-      status: 'pending',
-      urgent: false
-    },
-    { 
-      user: 'John Smith', 
-      role: 'Teacher', 
-      item: 'Lab Equipment Set', 
-      quantity: 5,
-      duration: '1 day',
-      timeAgo: '1 day ago',
-      status: 'pending',
-      urgent: false
-    },
-  ];
+  const allRequests: Array<{
+    user: string;
+    role: string;
+    item: string;
+    quantity: number;
+    duration: string;
+    timeAgo: string;
+    status: string;
+    urgent: boolean;
+  }> = [];
 
   // Filter logic
   let filtered = allRequests;
