@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using Ledger.Api.Auth;
 using Ledger.Api.Data;
 using Ledger.Api.Domain;
@@ -8,7 +9,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddControllers();
+builder.Services
+    .AddControllers()
+    .AddJsonOptions(options => { options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()); });
+
 builder.Services.AddDbContext<AppDbContext>(options => { options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")); });
 builder.Services.AddOpenApi();
 

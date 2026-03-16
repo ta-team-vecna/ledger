@@ -59,3 +59,15 @@ Authorization: Bearer {{auth_token}}
 Content-Type: application/json
 
 ###
+
+DELETE {{Ledger}}/api/equipment/3973c348-b990-4670-b032-f6fd0b0c8065
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+###
+
+GET {{Ledger}}/api/users
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+###
