@@ -7,10 +7,19 @@ interface AddItemModalProps {
   open: boolean;
   onClose: () => void;
   onItemAdded: () => void;
-  token: string;
 }
 
-const AddItemModal = ({ open, onClose, onItemAdded, token }: AddItemModalProps) => {
+interface EquipmentPayload {
+  name: string;
+  type: string;
+  serialNumber: string;
+  condition: string;
+  location: string;
+  requiresAdminApproval: boolean;
+  photoUrl?: string;
+}
+
+const AddItemModal = ({ open, onClose, onItemAdded }: AddItemModalProps) => {
   const [formData, setFormData] = useState({
     name: '',
     type: '',
@@ -44,7 +53,7 @@ const AddItemModal = ({ open, onClose, onItemAdded, token }: AddItemModalProps) 
 
     try {
       // Prepare payload - photoUrl is optional, so omit if empty
-      const payload: any = {
+      const payload: EquipmentPayload = {
         name: formData.name,
         type: formData.type,
         serialNumber: formData.serialNumber,
@@ -62,8 +71,7 @@ const AddItemModal = ({ open, onClose, onItemAdded, token }: AddItemModalProps) 
         method: 'POST',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)
       });

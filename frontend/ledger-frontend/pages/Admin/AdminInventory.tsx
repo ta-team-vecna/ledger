@@ -1,5 +1,5 @@
 // AdminInventory.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Topbar from "../../components/topBar/topBar";
 import AdminSidebar from "../../components/adminSideBar/adminSideBar";
 import Icon from '@mui/material/Icon';
@@ -14,9 +14,19 @@ import Checkbox from '@mui/material/Checkbox';
 import Select from '@mui/material/Select';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
-import { Divider } from '@mui/material';
 import styles from './AdminInventory.module.css';
-import { useEffect } from 'react';  
+
+interface Equipment {
+  id: string;
+  name: string;
+  type: string;
+  serialNumber: string;
+  condition: string;
+  status: string;
+  location: string;
+  photoUrl?: string;
+  requiresAdminApproval: boolean;
+}
 import AddItemModal from '../../components/Admin/addItemModal';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -34,7 +44,7 @@ const AdminInventory = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [equipment, setEquipment] = useState<any[]>([]);
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -137,10 +147,7 @@ const handleDeleteSelected = async () => {
     const deletePromises = selectedItems.map(id => 
       fetch(`http://localhost:3001/api/equipment/${id}`, {
         method: 'DELETE',
-        credentials: 'include',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+        credentials: 'include'
       })
     );
     
@@ -510,8 +517,7 @@ indeterminate={selectedItems.length > 0 && selectedItems.length < mappedItems.le
       <AddItemModal
   open={addModalOpen}
   onClose={() => setAddModalOpen(false)}
-  onItemAdded={fetchEquipment}  // Refresh the list after adding
-  token={localStorage.getItem('token') || ''}
+  onItemAdded={fetchEquipment}
 />
           <Dialog
   open={deleteConfirmOpen}
