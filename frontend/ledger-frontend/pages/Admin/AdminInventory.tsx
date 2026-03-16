@@ -348,21 +348,20 @@ const handleAction = async (action: string, itemId: string | null) => {
             />
 
             <FormControl size="small" className={styles.filterSelect}>
-              <InputLabel>Status</InputLabel>
-              <Select
-                value={statusFilter}
-                label="Status"
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <MenuItem value="all">All Status</MenuItem>
-                <MenuItem value="available">Available</MenuItem>
-                <MenuItem value="borrowed">Borrowed</MenuItem>
-                <MenuItem value="overdue">Overdue</MenuItem>
-                <MenuItem value="repair">In Repair</MenuItem>
-                <MenuItem value="unavailable">Unavailable</MenuItem>
-                <MenuItem value="reserved">Reserved</MenuItem>
-              </Select>
-            </FormControl>
+  <InputLabel>Status</InputLabel>
+  <Select
+    value={statusFilter}
+    label="Status"
+    onChange={(e) => setStatusFilter(e.target.value)}
+  >
+    <MenuItem value="all">All Status</MenuItem>
+    <MenuItem value="Available">Available</MenuItem>
+    <MenuItem value="CheckedOut">Checked out</MenuItem>
+    <MenuItem value="UnderRepair">Under Repair</MenuItem>
+    <MenuItem value="Reserved">Reserved</MenuItem>
+    <MenuItem value="Retired">Retired</MenuItem>
+  </Select>
+</FormControl>
 
             <FormControl size="small" className={styles.filterSelect}>
               <InputLabel>Category</InputLabel>
