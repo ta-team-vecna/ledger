@@ -8,7 +8,7 @@ const RegisterPage = lazy(() => import('../../pages/LandPage/RegisterPage'));
 const Dashboard = lazy(() => import('../../pages/Dashboard/Dashboard'));
 const AdminPanel = lazy(() => import('../../pages/Admin/AdminPanel')); // ✅ Keep this
 
-//const AdminUsers = lazy(() => import('../../pages/Admin/AdminUsers'));
+const AdminUsers = lazy(() => import('../../pages/Admin/AdminUsers'));
 const AdminInventory = lazy(() => import('../../pages/Admin/AdminInventory'));
 //const AdminRequests = lazy(() => import('../../pages/Admin/AdminRequests'));
 //const AdminSettings = lazy(() => import('../../pages/Admin/AdminSettings'))
@@ -59,6 +59,14 @@ export const router = createBrowserRouter([
   element: withSuspense(
     <ProtectedRoute>
       <AdminInventory/>
+    </ProtectedRoute>
+  )
+  },
+  {
+  path: '/admin/users',
+  element: withSuspense(
+    <ProtectedRoute>
+      <AdminUsers/>
     </ProtectedRoute>
   )
   }

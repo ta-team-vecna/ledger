@@ -1,0 +1,286 @@
+/* pages/Admin/AdminUsers.module.css */
+:root{
+    --accent-color:#1976D2;
+}
+
+.usersContainer {
+  flex: 1;
+  padding: 20px;
+  margin-top: clamp(3vh, 8vw, 9vh);
+  margin-left: 0;
+  margin-right: 15px;
+  transition: margin-left 0.3s ease;
+}
+
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: calc(100vh - 200px);
+  color: #666;
+}
+
+.controlsBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
+  background-color: var(--card-background-color);
+  padding: 15px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.controlsLeft {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.controlsRight {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.addButton {
+  background-color: var(--accent-color) !important;
+}
+
+.deleteButton {
+  border-color: #f44336 !important;
+  color: #f44336 !important;
+}
+
+.deleteButton:disabled {
+  border-color: #ccc !important;
+  color: #ccc !important;
+}
+
+.searchField {
+  min-width: 250px;
+}
+
+.searchIcon {
+  font-size: 18px !important;
+  color: var(--hover-color);
+}
+
+.filterSelect {
+  min-width: 140px;
+}
+
+.tableContainer {
+  background-color: var(--card-background-color);
+  border-radius: 12px;
+  padding: 5px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 20px 25px -15px rgba(0,0,0,0.4);
+  max-height: 500px;
+  overflow-y: auto;
+  position: relative;
+}
+
+.usersTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.usersTable th {
+  position: sticky;
+  top: 0;
+  background-color: var(--card-background-color);
+  color: var(--accent-color);
+  font-weight: 600;
+  text-align: left;
+  padding: 12px 8px;
+  border-bottom: 2px solid #eee;
+  z-index: 10;
+}
+
+.usersTable td {
+  padding: 12px 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.usersTable tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.selectedRow {
+  background-color: rgba(65, 91, 128, 0.05);
+}
+
+.checkboxCell {
+  width: 40px;
+  text-align: center;
+}
+
+.userCell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.userAvatar {
+  width: 36px !important;
+  height: 36px !important;
+  background-color: var(--accent-color) !important;
+  font-size: 14px !important;
+  font-weight: 600;
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.userName {
+  font-weight: 500;
+  color: #333;
+}
+
+.userEmail {
+  color: #666;
+  font-size: 13px;
+}
+
+.createdAt {
+  color: #666;
+  font-size: 13px;
+}
+
+.adminCheckbox {
+  padding: 4px !important;
+}
+
+.checkboxIcon {
+  font-size: 20px !important;
+  color: #999;
+}
+
+.checkboxIconChecked {
+  font-size: 20px !important;
+  color: var(--accent-color) !important;
+}
+
+.actionButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.actionButton {
+  font-size: 11px !important;
+  padding: 4px 10px !important;
+  min-width: 60px;
+}
+
+.tableFooter {
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #666;
+}
+
+.selectedCount {
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+/* Scrollbar styling */
+.tableContainer::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.tableContainer::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.tableContainer::-webkit-scrollbar-thumb {
+  background: var(--accent-color);
+  border-radius: 10px;
+}
+
+
+
+/* Responsive */
+@media (max-width: 900px) {
+  .controlsBar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .controlsRight {
+    justify-content: space-between;
+  }
+  
+  .searchField {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .usersTable {
+    font-size: 12px;
+  }
+  
+  .userAvatar {
+    width: 30px !important;
+    height: 30px !important;
+    font-size: 12px !important;
+  }
+  
+  .controlsRight {
+    flex-direction: column;
+  }
+  
+  .filterSelect {
+    width: 100%;
+  }
+  
+  .actionButtons {
+    flex-direction: column;
+  }
+  
+  .actionButton {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .userCell {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}
+
+/* Add to AdminUsers.module.css */
+.promoteButton {
+  border-color: #4caf50 !important;
+  color: #4caf50 !important;
+}
+
+.promoteButton:hover {
+  background-color: rgba(76, 175, 80, 0.04) !important;
+}
+
+.demoteButton {
+  border-color: #ff9800 !important;
+  color: #ff9800 !important;
+}
+
+.demoteButton:hover {
+  background-color: rgba(255, 152, 0, 0.04) !important;
+}
+
+.actionButton {
+  min-width: 90px !important;
+  font-weight: 600 !important;
+}
