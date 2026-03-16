@@ -1,6 +1,6 @@
 
 // AdminPanel.tsx - Fixed layout
-import { useState, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import Topbar from "../../components/topBar/topBar";
 import AdminSidebar from '../../components/adminSideBar/adminSideBar';
 import { Divider } from '@mui/material';
@@ -13,8 +13,18 @@ import Chip from '@mui/material/Chip';
 import Avatar from '@mui/material/Avatar';
 import Tooltip from '@mui/material/Tooltip';
 
+const API_BASE = "http://localhost:3001";
+
 const AdminPanel = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [totalItems, setTotalItems] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/equipment`, { credentials: "include" })
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then((data: unknown[]) => setTotalItems(data.length))
+      .catch(() => setTotalItems(null));
+  }, []);
   const [actionFilter, setActionFilter] = useState('all');
   const [actionLimit, setActionLimit] = useState(25);
   const [requestFilter, setRequestFilter] = useState('all');
@@ -89,7 +99,7 @@ const AdminPanel = () => {
               <span className={styles.statLabel}>
                 <Icon className={styles.statIcon}>inventory</Icon> Total Items:
               </span>
-              <span className={styles.statValue}>—</span>
+              <span className={styles.statValue}>{totalItems ?? "—"}</span>
             </div>
             <div className={styles.statItem}>
               <span className={styles.statLabel}>

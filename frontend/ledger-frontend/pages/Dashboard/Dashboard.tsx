@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import styles from "./Dashboard.module.css";
 import { Button } from "@mui/material";
 import Topbar from "../../components/topBar/topBar";
@@ -7,11 +8,22 @@ import ListItem from '@mui/material/ListItem';
 import Divider from '@mui/material/Divider';
 import ListItemText from '@mui/material/ListItemText';
 
+const API_BASE = "http://localhost:3001";
+
 function generateItems() {
   return [];
 }
 
 const Dashboard = () => {
+  const [totalItems, setTotalItems] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/equipment`, { credentials: "include" })
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then((data: unknown[]) => setTotalItems(data.length))
+      .catch(() => setTotalItems(null));
+  }, []);
+
   return (
     <>
       <Topbar></Topbar>
@@ -66,7 +78,7 @@ const Dashboard = () => {
               bar_chart
             </Icon>
             <h3>TOTAL ITEMS:</h3>
-            <h3>0</h3>
+            <h3>{totalItems ?? "—"}</h3>
           </div>
 
           <div className={styles.InventoryOverviewStatListItem}>
