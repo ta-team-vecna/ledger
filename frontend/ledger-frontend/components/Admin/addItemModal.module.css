@@ -1,0 +1,54 @@
+:root{
+    --accent-color:#1976d2;
+}
+.title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+.titleIcon {
+  font-size: 28px !important;
+  color: var(--accent-color);
+}
+
+.content {
+  padding: 20px !important;
+}
+
+.field {
+  margin-bottom: 15px !important;
+}
+
+.field input {
+  font-size: 14px;
+}
+
+.checkbox {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.error {
+  margin-bottom: 20px;
+}
+
+.actions {
+  padding: 16px 24px !important;
+  gap: 10px;
+}
+
+.cancelButton {
+  color: #666 !important;
+}
+
+.submitButton {
+  background-color: var(--accent-color) !important;
+  min-width: 120px;
+}
+
+.submitButton:disabled {
+  background-color: #ccc !important;
+}
