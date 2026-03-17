@@ -150,8 +150,17 @@ public sealed class AuthController : ControllerBase {
 
     [HttpPost("refresh")]
     [AllowAnonymous]
-    public async Task<IActionResult> Refresh([FromBody] TokenRefreshRequest request) {
-        var principal = _jwtTokenService.GetPrincipalFromExpiredToken(request.AccessToken);
+    public async Task<IActionResult> Refresh() {
+        var accessOk = Request.Cookies.TryGetValue("token", out var accessToken);
+        var refreshOk = Request.Cookies.TryGetValue("refreshToken", out var refreshToken);
+        if (!accessOk || !refreshOk) {
+            return BadRequest(new ProblemDetails {
+                Detail = "Missing access or refresh token.",
+                Status = StatusCodes.Status400BadRequest,
+            });
+        }
+
+        var principal = _jwtTokenService.GetPrincipalFromExpiredToken(accessToken!);
         if (principal == null) {
             return BadRequest(new ProblemDetails {
                 Detail = "Invalid access token or refresh token.",
@@ -169,7 +178,7 @@ public sealed class AuthController : ControllerBase {
 
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
         if (user == null ||
-            user.RefreshToken != request.RefreshToken ||
+            user.RefreshToken != refreshToken! ||
             user.RefreshTokenExpiryTime <= DateTime.UtcNow
         ) {
             return BadRequest(new ProblemDetails {
@@ -184,10 +193,9 @@ public sealed class AuthController : ControllerBase {
         user.RefreshToken = newRefreshToken;
         await _db.SaveChangesAsync();
 
-        return Ok(new TokenRefreshResponse(
-            newAccessToken,
-            newRefreshToken
-        ));
+        SetTokenCookies(newAccessToken, newRefreshToken);
+
+        return Ok();
     }
 
     [HttpGet("me")]

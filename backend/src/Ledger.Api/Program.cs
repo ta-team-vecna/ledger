@@ -50,9 +50,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 
     options.Events = new JwtBearerEvents {
         OnMessageReceived = ctx => {
-            if (ctx.Request.Cookies.TryGetValue("token", out var cookieToken)) ctx.Token = cookieToken;
+            if (ctx.Request.Cookies.TryGetValue("token", out var cookieToken)) {
+                ctx.Token = cookieToken;
+            }
+
             return Task.CompletedTask;
-        }
+        },
     };
 });
 
