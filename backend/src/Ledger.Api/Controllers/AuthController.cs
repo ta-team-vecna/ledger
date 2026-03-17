@@ -1,3 +1,4 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Ledger.Api.Auth;
 using Ledger.Api.Data;
@@ -27,13 +28,19 @@ public sealed class AuthController : ControllerBase {
         _jwtTokenService = jwtTokenService;
     }
 
-    private void SetTokenCookie(string token) {
-        Response.Cookies.Append("token", token, new CookieOptions {
+    private void SetTokenCookies(string accessToken, string refreshToken) {
+        // ReSharper disable once UseObjectOrCollectionInitializer
+        var cookieOptions = new CookieOptions {
             HttpOnly = true,
             Secure = false, // Set to true in production with HTTPS
             SameSite = SameSiteMode.Lax,
-            Expires = DateTimeOffset.UtcNow.AddDays(7),
-        });
+        };
+
+        cookieOptions.Expires = DateTimeOffset.UtcNow.AddMinutes(15);
+        Response.Cookies.Append("token", accessToken, cookieOptions);
+
+        cookieOptions.Expires = DateTimeOffset.UtcNow.AddDays(7);
+        Response.Cookies.Append("refreshToken", refreshToken, cookieOptions);
     }
 
     [HttpPost("register")]
@@ -58,14 +65,20 @@ public sealed class AuthController : ControllerBase {
 
         user.PasswordHash = _passwordHasher.HashPassword(user, request.Password);
 
+        var accessToken = _jwtTokenService.CreateToken(user);
+        var refreshToken = _jwtTokenService.GenerateRefreshToken();
+
+        user.RefreshToken = refreshToken;
+        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
 
-        var token = _jwtTokenService.CreateToken(user);
-        SetTokenCookie(token);
+        SetTokenCookies(accessToken, refreshToken);
 
         return Ok(new AuthResponse(
-            token,
+            accessToken,
+            refreshToken,
             user.Id,
             user.FirstName,
             user.LastName,
@@ -95,11 +108,19 @@ public sealed class AuthController : ControllerBase {
             });
         }
 
-        var token = _jwtTokenService.CreateToken(user);
-        SetTokenCookie(token);
+        var accessToken = _jwtTokenService.CreateToken(user);
+        var refreshToken = _jwtTokenService.GenerateRefreshToken();
+
+        user.RefreshToken = refreshToken;
+        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+
+        await _db.SaveChangesAsync();
+
+        SetTokenCookies(accessToken, refreshToken);
 
         return Ok(new AuthResponse(
-            token,
+            accessToken,
+            refreshToken,
             user.Id,
             user.FirstName,
             user.LastName,
@@ -110,10 +131,63 @@ public sealed class AuthController : ControllerBase {
 
     [HttpPost("logout")]
     [AllowAnonymous]
-    public IActionResult Logout() {
+    public async Task<IActionResult> Logout() {
         Response.Cookies.Delete("token");
+        Response.Cookies.Delete("refreshToken");
+
+        var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(userIdString, out var userId)) return Ok();
+
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
+        if (user == null) return Ok();
+
+        user.RefreshToken = null;
+        user.RefreshTokenExpiryTime = null;
+        await _db.SaveChangesAsync();
 
         return Ok();
+    }
+
+    [HttpPost("refresh")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Refresh([FromBody] TokenRefreshRequest request) {
+        var principal = _jwtTokenService.GetPrincipalFromExpiredToken(request.AccessToken);
+        if (principal == null) {
+            return BadRequest(new ProblemDetails {
+                Detail = "Invalid access token or refresh token.",
+                Status = StatusCodes.Status400BadRequest,
+            });
+        }
+
+        var userIdString = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+        if (!Guid.TryParse(userIdString, out var userId)) {
+            return BadRequest(new ProblemDetails {
+                Detail = "Invalid token claims.",
+                Status = StatusCodes.Status400BadRequest,
+            });
+        }
+
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
+        if (user == null ||
+            user.RefreshToken != request.RefreshToken ||
+            user.RefreshTokenExpiryTime <= DateTime.UtcNow
+        ) {
+            return BadRequest(new ProblemDetails {
+                Detail = "Invalid access token or refresh token.",
+                Status = StatusCodes.Status400BadRequest,
+            });
+        }
+
+        var newAccessToken = _jwtTokenService.CreateToken(user);
+        var newRefreshToken = _jwtTokenService.GenerateRefreshToken();
+
+        user.RefreshToken = newRefreshToken;
+        await _db.SaveChangesAsync();
+
+        return Ok(new TokenRefreshResponse(
+            newAccessToken,
+            newRefreshToken
+        ));
     }
 
     [HttpGet("me")]

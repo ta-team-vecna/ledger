@@ -2,6 +2,7 @@
 
 public sealed record AuthResponse(
     string Token,
+    string RefreshToken,
     Guid UserId,
     string FirstName,
     string LastName,

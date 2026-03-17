@@ -10,7 +10,7 @@ namespace Ledger.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Admin")]
+[Authorize(Policy = "StrictAdmin")]
 public class UsersController : ControllerBase {
     private readonly AppDbContext _db;
     private readonly IPasswordHasher<ApplicationUser> _passwordHasher;
