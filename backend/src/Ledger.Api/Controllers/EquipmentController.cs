@@ -47,7 +47,7 @@ public sealed class EquipmentController : ControllerBase {
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = "StrictAdmin")]
     public async Task<ActionResult<EquipmentResponse>> Create(CreateEquipmentRequest request) {
         var serialExists = await _db.Equipment
             .AnyAsync(x => x.SerialNumber == request.SerialNumber);
@@ -80,7 +80,7 @@ public sealed class EquipmentController : ControllerBase {
     }
 
     [HttpPut("{id:guid}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = "StrictAdmin")]
     public async Task<ActionResult<EquipmentResponse>> Update(Guid id, UpdateEquipmentRequest request) {
         var entity = await _db.Equipment.FirstOrDefaultAsync(x => x.Id == id);
         if (entity is null) {
@@ -104,7 +104,7 @@ public sealed class EquipmentController : ControllerBase {
     }
 
     [HttpPatch("{id:guid}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = "StrictAdmin")]
     public async Task<IActionResult> UpdateStatus(Guid id, UpdateEquipmentStatusRequest request) {
         var entity = await _db.Equipment.FirstOrDefaultAsync(x => x.Id == id);
         if (entity is null) {
@@ -121,7 +121,7 @@ public sealed class EquipmentController : ControllerBase {
     }
     
     [HttpDelete("{id:guid}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = "StrictAdmin")]
     public async Task<IActionResult> Delete(Guid id) {
         var entity = await _db.Equipment.FirstOrDefaultAsync(x => x.Id == id);
         if (entity is null) {
