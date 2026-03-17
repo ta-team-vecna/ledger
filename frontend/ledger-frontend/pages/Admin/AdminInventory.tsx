@@ -14,7 +14,8 @@ import Checkbox from '@mui/material/Checkbox';
 import Select from '@mui/material/Select';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
-import styles from './AdminInventory.module.css';
+import styles from './AdminInventory.module.css'; 
+import { useAdminGuard } from '../../hooks/useAdminGuard';
 
 interface Equipment {
   id: string;
@@ -35,6 +36,7 @@ import DialogActions from '@mui/material/DialogActions';
 import CircularProgress from '@mui/material/CircularProgress';
 
 const AdminInventory = () => {
+    const { loading: authLoading } = useAdminGuard();
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [activeItem, setActiveItem] = useState<string | null>(null);
@@ -49,6 +51,17 @@ const AdminInventory = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+   if (authLoading) {
+    return (
+      <>
+        <Topbar isAdmin={true} onMenuClick={() => setSidebarOpen(true)} />
+        <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className={styles.loadingContainer}>
+          <div>Verifying access...</div>
+        </div>
+      </>
+    );
+  }
 
   const handleSelectItem = (id: string) => {
   if (selectedItems.includes(id)) {
@@ -57,6 +70,44 @@ const AdminInventory = () => {
     setSelectedItems([...selectedItems, id]);
   }
   };
+
+  const verifyAdmin = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    
+    // Get current user ID
+    const meResponse = await fetch('http://localhost:3001/api/auth/me', {
+      credentials: 'include'
+    });
+    
+    if (!meResponse.ok) {
+      throw new Error('Not authenticated');
+    }
+    
+    const me = await meResponse.json();
+    
+    // Verify actual role from truth source
+    const usersResponse = await fetch('http://localhost:3001/api/users', {
+      credentials: 'include',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (!usersResponse.ok) {
+      throw new Error('Failed to verify permissions');
+    }
+    
+    const users = await usersResponse.json();
+    const currentUser = users.find((u: any) => u.id === me.userId);
+    
+    if (!currentUser || currentUser.role !== 'Admin') {
+      throw new Error('Admin privileges required');
+    }
+    
+    return true;
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : 'Authentication failed');
+  }
+};
 
   const formatStatus = (status: string) => {
   const statusMap: Record<string, string> = {
@@ -111,27 +162,27 @@ const AdminInventory = () => {
   // Get unique categories for filter
 
   useEffect(() => {
-  const fetchEquipment = async () => {
-    try {
-      const response = await fetch('http://localhost:3001/api/equipment', {
-        credentials: 'include', 
-        headers: { 
-          'Content-Type': 'application/json'  
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+    const fetchEquipment = async () => {
+  try {
+    const response = await fetch('http://localhost:3001/api/equipment', {
+      credentials: 'include', 
+      headers: { 
+        'Content-Type': 'application/json'  
       }
-      
-      const data = await response.json();
-      setEquipment(data);
-    } catch (error) {
-      console.error('Failed to fetch:', error);
-    } finally {
-      setLoading(false);
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  };
+    
+    const data = await response.json();
+    setEquipment(data);
+  } catch (error) {
+    console.error('Failed to fetch:', error);
+  } finally {
+    setLoading(false);
+  }
+};
   
   fetchEquipment();
 }, []);
@@ -143,11 +194,18 @@ const handleDeleteSelected = async () => {
   setDeleting(true);
   
   try {
-    // Delete each selected item
+    await verifyAdmin();
+    
+    const token = localStorage.getItem('token');
+    
+    // Delete each selected item with auth header
     const deletePromises = selectedItems.map(id => 
       fetch(`http://localhost:3001/api/equipment/${id}`, {
         method: 'DELETE',
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${token}` 
+        }
       })
     );
     
@@ -157,7 +215,7 @@ const handleDeleteSelected = async () => {
     const failed = results.filter(r => !r.ok);
     if (failed.length > 0) {
       console.error(`${failed.length} items failed to delete`);
-      // You might want to show a warning here
+      alert(`${failed.length} items could not be deleted. You may not have permission.`);
     }
     
     // Refresh the equipment list
@@ -170,6 +228,7 @@ const handleDeleteSelected = async () => {
     
   } catch (error) {
     console.error('Failed to delete items:', error);
+    alert(error instanceof Error ? error.message : 'Failed to delete items');
   } finally {
     setDeleting(false);
   }
@@ -217,44 +276,50 @@ const handleAction = async (action: string, itemId: string | null) => {
   
   switch(action) {
     case 'available':
-      statusNumber = 0;  // Available
+      statusNumber = 0;
       break;
     case 'reserved':
-      statusNumber = 1;  // Reserved
+      statusNumber = 1;
       break;
     case 'borrow':
-      statusNumber = 2;  // CheckedOut
+      statusNumber = 2;
       break;
     case 'repair':
-      statusNumber = 3;  // UnderRepair
+      statusNumber = 3;
       break;
     case 'retired':
-      statusNumber = 4;  // Retired
+      statusNumber = 4;
       break;
     default:
       return;
   }
   
   try {
+    await verifyAdmin();
+    
+    const token = localStorage.getItem('token');
+    
     const response = await fetch(`http://localhost:3001/api/equipment/${itemId}`, {
       method: 'PATCH',
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: statusNumber })  // 👈 Send number!
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`  // 👈 Add token header
+      },
+      body: JSON.stringify({ status: statusNumber })
     });
     
-    if (response.ok) {
-      const fetchResponse = await fetch('http://localhost:3001/api/equipment', {
-        credentials: 'include'
-      });
-      const data = await fetchResponse.json();
-      setEquipment(data);
-    } else {
+    if (!response.ok) {
       const errorData = await response.json();
-      console.error('Update failed:', errorData);
+      throw new Error(errorData.message || 'Failed to update status');
     }
+    
+    // Refresh the equipment list
+    await fetchEquipment();
+    
   } catch (error) {
     console.error('Failed to update status:', error);
+    alert(error instanceof Error ? error.message : 'Failed to update status');
   }
   
   handleActionClose();

@@ -1,5 +1,3 @@
-
-// AdminPanel.tsx - Fixed layout
 import { useState, useEffect, type ReactNode } from 'react';
 import Topbar from "../../components/topBar/topBar";
 import AdminSidebar from '../../components/adminSideBar/adminSideBar';
@@ -12,10 +10,13 @@ import ButtonGroup from '@mui/material/ButtonGroup';
 import Chip from '@mui/material/Chip';
 import Avatar from '@mui/material/Avatar';
 import Tooltip from '@mui/material/Tooltip';
+import { useAdminGuard } from '../../hooks/useAdminGuard'; 
+
 
 const API_BASE = "http://localhost:3001";
 
 const AdminPanel = () => {
+    const { loading: authLoading } = useAdminGuard();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [totalItems, setTotalItems] = useState<number | null>(null);
 
@@ -29,6 +30,19 @@ const AdminPanel = () => {
   const [actionLimit, setActionLimit] = useState(25);
   const [requestFilter, setRequestFilter] = useState('all');
   const [requestLimit, setRequestLimit] = useState(25);   
+
+  if (authLoading) {
+    return (
+      <>
+        <Topbar isAdmin={true} onMenuClick={() => setSidebarOpen(true)} />
+        <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className={styles.loadingContainer}>
+          <div>Verifying access...</div>
+        </div>
+      </>
+    );
+  }
+
 
   return (
     <>

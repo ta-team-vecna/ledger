@@ -1,4 +1,3 @@
-// pages/Admin/AdminUsers.tsx
 import { useState, useEffect } from 'react';
 import Topbar from "../../components/topBar/topBar";
 import AdminSidebar from "../../components/adminSideBar/adminSideBar";
@@ -16,11 +15,15 @@ import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import { Divider } from '@mui/material';
 import styles from './AdminUsers.module.css';
-
+import { useAuth } from '../../hooks/useAuth';
+import { useAdminGuard } from '../../hooks/useAdminGuard';
 
 
 
 const AdminUsers = () => {
+    const { loading: authLoading } = useAdminGuard();
+  const { user: currentUser, checkAuth } = useAuth();
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);  
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +32,20 @@ const AdminUsers = () => {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [selectMode, setSelectMode] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
-const fetchUsers = async () => {
+
+  if (authLoading) {
+    return (
+      <>
+        <Topbar isAdmin={true} onMenuClick={() => setSidebarOpen(true)} />
+        <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className={styles.loadingContainer}>
+          <div>Verifying access...</div>
+        </div>
+      </>
+    );
+  }
+
+  const fetchUsers = async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch('http://localhost:3001/api/users', {
@@ -51,8 +67,8 @@ const fetchUsers = async () => {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        createdAt: new Date(user.createdAtUtc).toISOString().split('T')[0], // Format as YYYY-MM-DD
-        isAdmin: user.role === 'Admin'  // Convert role string to boolean
+        createdAt: new Date(user.createdAtUtc).toISOString().split('T')[0],
+        isAdmin: user.role === 'Admin'
       }));
       
       setUsers(transformedUsers);
@@ -63,8 +79,32 @@ const fetchUsers = async () => {
     }
   };
 
-    useEffect(() => {
-  
+  // Load users on mount
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  // Load current user
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/auth/me', {
+          credentials: 'include'
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setCurrentUserId(data.userId);
+        }
+      } catch (error) {
+        console.error('Failed to fetch current user:', error);
+      }
+    };
+    fetchCurrentUser();
+  }, []);
+
+
+
+useEffect(() => {
   fetchUsers();
 }, []);
 
@@ -91,6 +131,83 @@ const fetchUsers = async () => {
       day: 'numeric'
     });
   };
+
+  const handleRoleChange = async (userId: string, currentIsAdmin: boolean) => {
+  const newRole = currentIsAdmin ? 0 : 1;
+  const action = currentIsAdmin ? 'DEMOTE' : 'PROMOTE';
+  
+  if (!confirm(`Are you sure you want to ${action} this user?`)) return;
+
+  try {
+    const token = localStorage.getItem('token');
+    
+    //VERIFY we're actually admin using the TRUTH source
+    const meResponse = await fetch('http://localhost:3001/api/auth/me', {
+      credentials: 'include'
+    });
+    const me = await meResponse.json();
+    
+    const usersResponse = await fetch('http://localhost:3001/api/users', {
+      credentials: 'include',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (!usersResponse.ok) {
+      throw new Error('Failed to verify permissions');
+    }
+    
+    const users = await usersResponse.json();
+    const currentUser = users.find((u: any) => u.id === me.userId);
+    
+    // Double-check I'm actually admin
+    if (!currentUser || currentUser.role !== 'Admin') {
+      throw new Error('You must be an admin to change roles');
+    }
+
+    // Now actually perform the role change
+    const response = await fetch(`http://localhost:3001/api/users/${userId}`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ role: newRole })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to update role');
+    }
+
+    // Refresh the user list to get updated data
+    await fetchUsers();
+    
+    // Check if this was the current user
+    const updatedUsersResponse = await fetch('http://localhost:3001/api/users', {
+      credentials: 'include',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const updatedUsers = await updatedUsersResponse.json();
+    const updatedCurrentUser = updatedUsers.find((u: any) => u.id === me.userId);
+
+    if (updatedCurrentUser?.id === userId) {
+      alert('Your role has been changed. Logging you out...');
+      
+      await fetch('http://localhost:3001/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.href = '/login';
+    }
+  } catch (error) {
+    console.error(`Failed to ${action} user:`, error);
+    alert(`Failed to ${action} user. Please try again.`);
+  }
+};
 
   // Filter users based on search and role
   const filteredUsers = users.filter(user => {
@@ -248,17 +365,27 @@ const fetchUsers = async () => {
                     />
                   </td>
                   <td>
-               <div className={styles.actionButtons}>
-  <Button
-    size="small"
-    variant="outlined"
-    className={`${styles.actionButton} ${user.isAdmin ? styles.demoteButton : styles.promoteButton}`}
-    startIcon={<Icon>{user.isAdmin ? 'admin_panel_settings' : 'person_add'}</Icon>}
-  >
-    {user.isAdmin ? 'DEMOTE' : 'PROMOTE'}
-  </Button>
-</div>
-                  </td>
+                  <div className={styles.actionButtons}>
+                    <Button
+                      disabled={user.id === currentUser?.userId}
+                      size="small"
+                      variant="outlined"
+                      className={`${styles.actionButton} ${user.isAdmin ? styles.demoteButton : styles.promoteButton}`}
+                      startIcon={<Icon>{user.isAdmin ? 'admin_panel_settings' : 'person_add'}</Icon>}
+                      onClick={() => handleRoleChange(user.id, user.isAdmin)}
+                    >
+                      {user.isAdmin ? 'DEMOTE' : 'PROMOTE'}
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      className={styles.actionButton}
+                      startIcon={<Icon>more_vert</Icon>}
+                    >
+                      More
+                    </Button>
+                  </div>
+                </td>
                 </tr>
               ))}
             </tbody>
