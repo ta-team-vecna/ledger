@@ -4,6 +4,7 @@ using Ledger.Api.Auth;
 using Ledger.Api.Data;
 using Ledger.Api.Domain;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -55,10 +56,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
     };
 });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options => {
+    options.AddPolicy("StrictAdmin", policy => {
+        policy.RequireAuthenticatedUser();
+        policy.AddRequirements(new StrictAdminRequirement());
+    });
+});
 
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IPasswordHasher<ApplicationUser>, PasswordHasher<ApplicationUser>>();
+builder.Services.AddScoped<IAuthorizationHandler, StrictAdminHandler>();
 
 var app = builder.Build();
 if (app.Environment.IsDevelopment()) {
