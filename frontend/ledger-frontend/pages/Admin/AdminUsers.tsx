@@ -454,14 +454,6 @@ const AdminUsers = () => {
                     >
                       {user.isAdmin ? 'DEMOTE' : 'PROMOTE'}
                     </Button>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      className={styles.actionButton}
-                      startIcon={<Icon>more_vert</Icon>}
-                    >
-                      More
-                    </Button>
                   </div>
                 </td>
                 </tr>
