@@ -103,7 +103,7 @@ public sealed class EquipmentController : ControllerBase {
         return Ok(ResponseFromEntity(entity));
     }
 
-    [HttpPatch("{id:guid}")]
+    [HttpPut("{id:guid}/status")]
     [Authorize(Policy = "StrictAdmin")]
     public async Task<IActionResult> UpdateStatus(Guid id, UpdateEquipmentStatusRequest request) {
         var entity = await _db.Equipment.FirstOrDefaultAsync(x => x.Id == id);
