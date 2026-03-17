@@ -17,11 +17,14 @@ import { Divider } from '@mui/material';
 import styles from './AdminUsers.module.css';
 import { useAuth } from '../../hooks/useAuth';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
-
-
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import CircularProgress from '@mui/material/CircularProgress';
 
 const AdminUsers = () => {
-    const { loading: authLoading } = useAdminGuard();
+  const { loading: authLoading } = useAdminGuard();
   const { user: currentUser, checkAuth } = useAuth();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);  
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -32,19 +35,10 @@ const AdminUsers = () => {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [selectMode, setSelectMode] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
-  if (authLoading) {
-    return (
-      <>
-        <Topbar isAdmin={true} onMenuClick={() => setSidebarOpen(true)} />
-        <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className={styles.loadingContainer}>
-          <div>Verifying access...</div>
-        </div>
-      </>
-    );
-  }
-
+  
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -61,7 +55,6 @@ const AdminUsers = () => {
       
       const data = await response.json();
       
-      // Transform the data to match your table structure
       const transformedUsers = data.map((user: any) => ({
         id: user.id,
         firstName: user.firstName,
@@ -79,11 +72,6 @@ const AdminUsers = () => {
     }
   };
 
-  // Load users on mount
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
   // Load current user
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -94,7 +82,7 @@ const AdminUsers = () => {
         if (response.ok) {
           const data = await response.json();
           setCurrentUserId(data.userId);
-        }
+        } 
       } catch (error) {
         console.error('Failed to fetch current user:', error);
       }
@@ -102,27 +90,39 @@ const AdminUsers = () => {
     fetchCurrentUser();
   }, []);
 
+  // Load users
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  if (authLoading) {
+    return (
+      <>
+        <Topbar isAdmin={true} onMenuClick={() => setSidebarOpen(true)} />
+        <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className={styles.loadingContainer}>
+          <div>Verifying access...</div>
+        </div>
+      </>
+    );
+  }
 
 
-useEffect(() => {
-  fetchUsers();
-}, []);
+    const handleSelectAll = () => {
+      if (selectedUsers.length === filteredUsers.length) {
+        setSelectedUsers([]);
+      } else {
+        setSelectedUsers(filteredUsers.map(user => user.id));
+      }
+    };
 
-  const handleSelectAll = () => {
-    if (selectedUsers.length === filteredUsers.length) {
-      setSelectedUsers([]);
-    } else {
-      setSelectedUsers(filteredUsers.map(user => user.id));
-    }
-  };
-
-  const handleSelectUser = (id: string) => {
-    if (selectedUsers.includes(id)) {
-      setSelectedUsers(selectedUsers.filter(userId => userId !== id));
-    } else {
-      setSelectedUsers([...selectedUsers, id]);
-    }
-  };
+    const handleSelectUser = (id: string) => {
+      if (selectedUsers.includes(id)) {
+        setSelectedUsers(selectedUsers.filter(userId => userId !== id));
+      } else {
+        setSelectedUsers([...selectedUsers, id]);
+      }
+    };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -131,6 +131,7 @@ useEffect(() => {
       day: 'numeric'
     });
   };
+
 
   const handleRoleChange = async (userId: string, currentIsAdmin: boolean) => {
   const newRole = currentIsAdmin ? 0 : 1;
@@ -141,7 +142,7 @@ useEffect(() => {
   try {
     const token = localStorage.getItem('token');
     
-    //VERIFY we're actually admin using the TRUTH source
+   
     const meResponse = await fetch('http://localhost:3001/api/auth/me', {
       credentials: 'include'
     });
@@ -235,6 +236,83 @@ useEffect(() => {
     );
   }
 
+  const handleDeleteSelected = async () => {
+  if (selectedUsers.length === 0) return;
+  
+  setDeleting(true);
+  
+  try {
+    // VERIFY admin status before deletion
+    const token = localStorage.getItem('token');
+    
+    const meResponse = await fetch('http://localhost:3001/api/auth/me', {
+      credentials: 'include'
+    });
+    const me = await meResponse.json();
+    
+    const usersResponse = await fetch('http://localhost:3001/api/users', {
+      credentials: 'include',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (!usersResponse.ok) {
+      throw new Error('Failed to verify permissions');
+    }
+    
+    const users = await usersResponse.json();
+    const currentUser = users.find((u: any) => u.id === me.userId);
+    
+    if (!currentUser || currentUser.role !== 'Admin') {
+      alert('You must be an admin to delete users');
+      setDeleteConfirmOpen(false);
+      setDeleting(false);
+      return;
+    }
+
+    // Check if trying to delete yourself
+    if (selectedUsers.includes(currentUser.id)) {
+      alert('You cannot delete your own account');
+      setDeleteConfirmOpen(false);
+      setDeleting(false);
+      return;
+    }
+
+    // Delete each selected user
+    const deletePromises = selectedUsers.map(id => 
+      fetch(`http://localhost:3001/api/users/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+    );
+    
+    const results = await Promise.all(deletePromises);
+    
+    // Check if any deletions failed
+    const failed = results.filter(r => !r.ok);
+    if (failed.length > 0) {
+      console.error(`${failed.length} users failed to delete`);
+      alert(`${failed.length} users could not be deleted. They may not exist or you lack permission.`);
+    }
+    
+    // Refresh the user list
+    await fetchUsers();
+    
+    // Clear selection and exit select mode
+    setSelectedUsers([]);
+    setSelectMode(false);
+    setDeleteConfirmOpen(false);
+    
+  } catch (error) {
+    console.error('Failed to delete users:', error);
+    alert('Failed to delete users. Please try again.');
+  } finally {
+    setDeleting(false);
+  }
+};
+
   return (
     <>
       <Topbar isAdmin={true} onMenuClick={() => setSidebarOpen(true)} />
@@ -261,10 +339,10 @@ useEffect(() => {
               className={styles.deleteButton}
               startIcon={<Icon>delete</Icon>}
               disabled={selectedUsers.length === 0}
+              onClick={() => setDeleteConfirmOpen(true)}
             >
               Delete ({selectedUsers.length})
             </Button>
-
             <Button 
               variant={selectMode ? 'contained' : 'outlined'}
               onClick={() => setSelectMode(!selectMode)}
@@ -413,6 +491,37 @@ useEffect(() => {
         setAddModalOpen(false);
       }}
     />
+
+    <Dialog
+  open={deleteConfirmOpen}
+  onClose={() => !deleting && setDeleteConfirmOpen(false)}
+>
+  <DialogTitle>Confirm Delete</DialogTitle>
+  <DialogContent>
+    <p>Are you sure you want to delete {selectedUsers.length} selected user{selectedUsers.length !== 1 ? 's' : ''}?</p>
+    <p style={{ color: '#f44336', fontSize: '0.9em', marginTop: '10px' }}>
+      <Icon style={{ fontSize: '16px', verticalAlign: 'middle', marginRight: '5px' }}>warning</Icon>
+      This action cannot be undone.
+    </p>
+  </DialogContent>
+  <DialogActions>
+    <Button 
+      onClick={() => setDeleteConfirmOpen(false)} 
+      disabled={deleting}
+    >
+      Cancel
+    </Button>
+    <Button 
+      onClick={handleDeleteSelected} 
+      color="error" 
+      variant="contained"
+      disabled={deleting}
+      startIcon={deleting ? <CircularProgress size={20} /> : <Icon>delete</Icon>}
+    >
+      {deleting ? 'Deleting...' : 'Delete'}
+    </Button>
+  </DialogActions>
+</Dialog>
     </>
   );
 };
