@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Linq.Expressions;
+using System.Security.Claims;
 using Ledger.Api.Data;
 using Ledger.Api.Domain;
 using Ledger.Api.Dto.Equipment;
@@ -24,7 +25,7 @@ public sealed class RequestsController : ControllerBase {
         var request = await _db.EquipmentRequests
             .AsNoTracking()
             .Where(x => x.Id == id)
-            .Select(x => ResponseFromEntity(x))
+            .Select(ResponseFromEntity)
             .FirstOrDefaultAsync();
 
         if (request is null) {
@@ -45,7 +46,7 @@ public sealed class RequestsController : ControllerBase {
         var requests = await _db.EquipmentRequests
             .AsNoTracking()
             .Where(x => x.UserId == userId)
-            .Select(x => ResponseFromEntity(x))
+            .Select(ResponseFromEntity)
             .ToListAsync();
 
         return Ok(requests);
@@ -62,7 +63,7 @@ public sealed class RequestsController : ControllerBase {
         }
 
         var requests = await query
-            .Select(x => ResponseFromEntity(x))
+            .Select(ResponseFromEntity)
             .ToListAsync();
 
         return Ok(requests);
@@ -72,7 +73,7 @@ public sealed class RequestsController : ControllerBase {
     [Authorize(Policy = "StrictAdmin")]
     public async Task<ActionResult<IEnumerable<EquipmentRequestResponse>>> GetAllRequests() {
         var requests = await _db.EquipmentRequests.AsNoTracking()
-            .Select(x => ResponseFromEntity(x))
+            .Select(ResponseFromEntity)
             .ToListAsync();
 
         return Ok(requests);
@@ -115,7 +116,7 @@ public sealed class RequestsController : ControllerBase {
         var response = await _db.EquipmentRequests
             .AsNoTracking()
             .Where(x => x.Id == entity.Id)
-            .Select(x => ResponseFromEntity(x))
+            .Select(ResponseFromEntity)
             .FirstAsync();
 
         return CreatedAtAction(nameof(GetById), new { id = entity.Id }, response);
@@ -190,7 +191,7 @@ public sealed class RequestsController : ControllerBase {
         return NoContent();
     }
 
-    private static EquipmentRequestResponse ResponseFromEntity(EquipmentRequest x) => new(
+    private static Expression<Func<EquipmentRequest, EquipmentRequestResponse>> ResponseFromEntity => x => new EquipmentRequestResponse(
         x.Id,
         x.UserId,
         x.User.FullName,
