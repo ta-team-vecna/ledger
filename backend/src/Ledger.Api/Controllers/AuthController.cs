@@ -1,4 +1,3 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Ledger.Api.Auth;
 using Ledger.Api.Data;
@@ -151,38 +150,17 @@ public sealed class AuthController : ControllerBase {
     [HttpPost("refresh")]
     [AllowAnonymous]
     public async Task<IActionResult> Refresh() {
-        var accessOk = Request.Cookies.TryGetValue("token", out var accessToken);
-        var refreshOk = Request.Cookies.TryGetValue("refreshToken", out var refreshToken);
-        if (!accessOk || !refreshOk) {
+        if (!Request.Cookies.TryGetValue("refreshToken", out var refreshToken)) {
             return BadRequest(new ProblemDetails {
-                Detail = "Missing access or refresh token.",
+                Detail = "Missing refresh token.",
                 Status = StatusCodes.Status400BadRequest,
             });
         }
 
-        var principal = _jwtTokenService.GetPrincipalFromExpiredToken(accessToken!);
-        if (principal == null) {
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.RefreshToken == refreshToken);
+        if (user == null || user.RefreshTokenExpiryTime <= DateTime.UtcNow) {
             return BadRequest(new ProblemDetails {
-                Detail = "Invalid access token or refresh token.",
-                Status = StatusCodes.Status400BadRequest,
-            });
-        }
-
-        var userIdString = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
-        if (!Guid.TryParse(userIdString, out var userId)) {
-            return BadRequest(new ProblemDetails {
-                Detail = "Invalid token claims.",
-                Status = StatusCodes.Status400BadRequest,
-            });
-        }
-
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
-        if (user == null ||
-            user.RefreshToken != refreshToken! ||
-            user.RefreshTokenExpiryTime <= DateTime.UtcNow
-        ) {
-            return BadRequest(new ProblemDetails {
-                Detail = "Invalid access token or refresh token.",
+                Detail = "Invalid or expired refresh token.",
                 Status = StatusCodes.Status400BadRequest,
             });
         }
