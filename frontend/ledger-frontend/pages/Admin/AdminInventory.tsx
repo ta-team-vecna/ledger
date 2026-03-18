@@ -27,6 +27,7 @@ interface Equipment {
   photoUrl?: string;
   requiresAdminApproval: boolean;
 }
+import { apiFetch } from '../../src/utils/apiFetch';
 import AddItemModal from '../../components/Admin/addItemModal';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -149,27 +150,26 @@ const AdminInventory = () => {
   // Get unique categories for filter
 
   useEffect(() => {
-    const fetchEquipment = async () => {
-  try {
-    const response = await fetch('http://localhost:3001/api/equipment', {
-      credentials: 'include', 
-      headers: { 
-        'Content-Type': 'application/json'  
+  const fetchEquipment = async () => {
+    try {
+      const response = await apiFetch('http://localhost:3001/api/equipment', {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      
+      const data = await response.json();
+      setEquipment(data);
+    } catch (error) {
+      console.error('Failed to fetch:', error);
+    } finally {
+      setLoading(false);
     }
-    
-    const data = await response.json();
-    setEquipment(data);
-  } catch (error) {
-    console.error('Failed to fetch:', error);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
   
   fetchEquipment();
 }, []);
@@ -181,18 +181,10 @@ const handleDeleteSelected = async () => {
   setDeleting(true);
   
   try {
-    await verifyAdmin();
-    
-    const token = localStorage.getItem('token');
-    
-    // Delete each selected item with auth header
-    const deletePromises = selectedItems.map(id => 
-      fetch(`http://localhost:3001/api/equipment/${id}`, {
+    // Delete each selected item
+    const deletePromises = selectedItems.map(id =>
+      apiFetch(`http://localhost:3001/api/equipment/${id}`, {
         method: 'DELETE',
-        credentials: 'include',
-        headers: {
-          'Authorization': `Bearer ${token}` 
-        }
       })
     );
     
@@ -223,10 +215,9 @@ const handleDeleteSelected = async () => {
 
 const fetchEquipment = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/equipment', {
-        credentials: 'include', 
-        headers: { 
-          'Content-Type': 'application/json'  
+      const response = await apiFetch('http://localhost:3001/api/equipment', {
+        headers: {
+          'Content-Type': 'application/json'
         }
       });
       
@@ -282,21 +273,17 @@ const handleAction = async (action: string, itemId: string | null) => {
   }
   
   try {
-    await verifyAdmin();
-    
-    const token = localStorage.getItem('token');
-    
-    const response = await fetch(`http://localhost:3001/api/equipment/${itemId}`, {
-      method: 'PATCH',
-      credentials: 'include',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`  // 👈 Add token header
-      },
+    const response = await apiFetch(`http://localhost:3001/api/equipment/${itemId}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: statusNumber })
     });
-    
-    if (!response.ok) {
+
+    if (response.ok) {
+      const fetchResponse = await apiFetch('http://localhost:3001/api/equipment');
+      const data = await fetchResponse.json();
+      setEquipment(data);
+    } else {
       const errorData = await response.json();
       throw new Error(errorData.message || 'Failed to update status');
     }

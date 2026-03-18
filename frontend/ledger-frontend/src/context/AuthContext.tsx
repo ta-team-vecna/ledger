@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { AuthContext, type User } from "./authContext.shared";
-
-const API_BASE = "http://localhost:3001";
+import { apiFetch, API_BASE } from "../utils/apiFetch";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -13,17 +12,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth();
   }, []);
 
+  // auto-logout when refresh token fails
+  useEffect(() => {
+    function onSessionExpired() {
+      fetch(`${API_BASE}/api/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      }).finally(() => setUser(null));
+    }
+
+    window.addEventListener("auth:session-expired", onSessionExpired);
+    return () =>
+      window.removeEventListener("auth:session-expired", onSessionExpired);
+  }, []);
+
   async function checkAuth() {
     try {
-      const res = await fetch(`${API_BASE}/api/auth/me`, {
-        credentials: "include", // send cookies
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setUser(data);
-      } else {
+      const res = await apiFetch(`${API_BASE}/api/auth/me`);
+      if (!res.ok) {
         setUser(null);
+        return;
       }
+
+      const me = await res.json();
+
+      const userRes = await apiFetch(`${API_BASE}/api/users/${me.userId}`);
+      const role = userRes.ok ? (await userRes.json()).role : me.role;
+
+      setUser({ ...me, role });
     } catch {
       setUser(null);
     } finally {
@@ -45,12 +61,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const data = await res.json();
+
+    const userRes = await apiFetch(`${API_BASE}/api/users/${data.userId}`);
+    const role = userRes.ok ? (await userRes.json()).role : data.role;
+
     setUser({
       userId: data.userId,
       firstName: data.firstName,
       lastName: data.lastName,
       email: data.email,
-      role: data.role,
+      role,
     });
   }
 
@@ -68,12 +88,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const data = await res.json();
+
+    const userRes = await apiFetch(`${API_BASE}/api/users/${data.userId}`);
+    const role = userRes.ok ? (await userRes.json()).role : data.role;
+
     setUser({
       userId: data.userId,
       firstName: data.firstName,
       lastName: data.lastName,
       email: data.email,
-      role: data.role,
+      role,
     });
   }
 
