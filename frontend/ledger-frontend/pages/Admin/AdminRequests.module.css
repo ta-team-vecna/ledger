@@ -1,0 +1,258 @@
+/* pages/Admin/AdminRequests.module.css */
+.container {
+  flex: 1;
+  padding: 20px;
+  margin-top: clamp(3vh, 8vw, 9vh);
+  margin-left: 0;
+  margin-right: 15px;
+  transition: margin-left 0.3s ease;
+}
+
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: calc(100vh - 200px);
+  color: #666;
+}
+
+.header h1 {
+  color: var(--accent-color);
+  margin-bottom: 20px;
+}
+
+.filterBar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.filterButton {
+  min-width: 100px !important;
+}
+
+.searchBar {
+  margin-bottom: 20px;
+}
+
+.searchIcon {
+  font-size: 18px !important;
+  color: var(--hover-color);
+}
+
+.tableContainer {
+  background-color: var(--card-background-color);
+  border-radius: 12px;
+  padding: 5px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 20px 25px -15px rgba(0,0,0,0.4);
+  max-height: 500px;
+  overflow-y: auto;
+  position: relative;
+}
+
+.requestsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.requestsTable th {
+  position: sticky;
+  top: 0;
+  background-color: var(--card-background-color);
+  color: var(--accent-color);
+  font-weight: 600;
+  text-align: left;
+  padding: 12px 8px;
+  border-bottom: 2px solid #eee;
+  z-index: 10;
+}
+
+.requestsTable td {
+  padding: 12px 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.requestsTable tbody tr:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.userCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.userAvatar {
+  width: 28px !important;
+  height: 28px !important;
+  background-color: var(--accent-color) !important;
+  font-size: 12px !important;
+}
+
+.serialNumber {
+  font-family: monospace;
+  background-color: #f5f5f5;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.periodCell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.periodIcon {
+  font-size: 14px !important;
+  margin-right: 4px;
+  color: var(--hover-color);
+  vertical-align: middle;
+}
+
+.statusChip {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  border: 1px solid;
+}
+
+.requestedDate {
+  color: #666;
+  font-size: 12px;
+}
+
+.viewButton {
+  font-size: 11px !important;
+  padding: 2px 12px !important;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 60px !important;
+  color: #999;
+}
+
+.emptyIcon {
+  font-size: 48px !important;
+  color: #ccc;
+  margin-bottom: 10px;
+}
+
+.footer {
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #666;
+}
+
+.filterChip {
+  background-color: var(--accent-color) !important;
+  color: white !important;
+}
+
+/* Dialog styles */
+.dialogTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-right: 24px;
+}
+
+.dialogIcon {
+  font-size: 24px !important;
+  margin-right: 10px;
+  color: var(--hover-color);
+  vertical-align: middle;
+}
+
+.dialogContent {
+  padding: 24px !important;
+}
+
+.dialogGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.dialogSection {
+  background-color: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+}
+
+.dialogSection h3 {
+  color: var(--accent-color);
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dialogSection p {
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.dialogSectionFull {
+  grid-column: 1 / -1;
+  background-color: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+}
+
+.comment {
+  background-color: white;
+  padding: 12px;
+  border-radius: 6px;
+  border-left: 3px solid var(--hover-color);
+  margin: 10px 0 0 0 !important;
+  font-style: italic;
+}
+
+.dialogActions {
+  padding: 16px 24px !important;
+  gap: 10px;
+}
+
+/* Scrollbar */
+.tableContainer::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.tableContainer::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.tableContainer::-webkit-scrollbar-thumb {
+  background: var(--accent-color);
+  border-radius: 10px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .dialogGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .filterBar {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .requestsTable {
+    font-size: 12px;
+  }
+  
+  .userAvatar {
+    width: 24px !important;
+    height: 24px !important;
+  }
+}

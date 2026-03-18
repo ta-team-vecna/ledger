@@ -10,7 +10,7 @@ const AdminPanel = lazy(() => import('../../pages/Admin/AdminPanel')); // ✅ Ke
 
 const AdminUsers = lazy(() => import('../../pages/Admin/AdminUsers'));
 const AdminInventory = lazy(() => import('../../pages/Admin/AdminInventory'));
-//const AdminRequests = lazy(() => import('../../pages/Admin/AdminRequests'));
+const AdminRequests = lazy(() => import('../../pages/Admin/AdminRequests'));
 //const AdminSettings = lazy(() => import('../../pages/Admin/AdminSettings'))
 
 const withSuspense = (element: React.ReactNode) => (
@@ -67,6 +67,14 @@ export const router = createBrowserRouter([
     element: withSuspense(
       <AdminRoute>
         <AdminUsers/>
+      </AdminRoute>
+    )
+  },
+  {
+    path:'/admin/requests',
+     element: withSuspense(
+      <AdminRoute>
+        <AdminRequests/>
       </AdminRoute>
     )
   }
