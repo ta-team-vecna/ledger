@@ -83,7 +83,7 @@ const handleApprove = async (requestId: string) => {
   try {
     const response = await fetch(`http://localhost:3001/api/requests/${requestId}/approve`, {
       method: 'PUT',
-      credentials: 'include'  // 👈 This is enough! Cookie has the token
+      credentials: 'include'
     });
 
     if (!response.ok) {
@@ -105,7 +105,7 @@ const handleDeny = async (requestId: string) => {
   try {
     const response = await fetch(`http://localhost:3001/api/requests/${requestId}/reject`, {
       method: 'PUT',
-      credentials: 'include'  // 👈 Just this!
+      credentials: 'include'  
     });
 
     if (!response.ok) {
