@@ -19,6 +19,65 @@ public sealed class RequestsController : ControllerBase {
         _db = db;
     }
 
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<EquipmentRequestResponse>> GetById(Guid id) {
+        var request = await _db.EquipmentRequests
+            .AsNoTracking()
+            .Where(x => x.Id == id)
+            .Select(x => ResponseFromEntity(x))
+            .FirstOrDefaultAsync();
+
+        if (request is null) {
+            return NotFound(ApiErrors.NotFound("Request was not found."));
+        }
+
+        return Ok(request);
+    }
+
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<EquipmentRequestResponse>>> GetMyRequests() {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userIdClaim is null) {
+            return Unauthorized(ApiErrors.Unauthorized);
+        }
+
+        var userId = Guid.Parse(userIdClaim);
+        var requests = await _db.EquipmentRequests
+            .AsNoTracking()
+            .Where(x => x.UserId == userId)
+            .Select(x => ResponseFromEntity(x))
+            .ToListAsync();
+
+        return Ok(requests);
+    }
+
+    [HttpGet("filtered")]
+    [Authorize(Policy = "StrictAdmin")]
+    public async Task<ActionResult<IEnumerable<EquipmentRequestResponse>>> GetFilteredRequests(
+        [FromQuery] RequestStatus? status = null
+    ) {
+        var query = _db.EquipmentRequests.AsNoTracking().AsQueryable();
+        if (status.HasValue) {
+            query = query.Where(x => x.Status == status.Value);
+        }
+
+        var requests = await query
+            .Select(x => ResponseFromEntity(x))
+            .ToListAsync();
+
+        return Ok(requests);
+    }
+
+    [HttpGet("all")]
+    [Authorize(Policy = "StrictAdmin")]
+    public async Task<ActionResult<IEnumerable<EquipmentRequestResponse>>> GetAllRequests() {
+        var requests = await _db.EquipmentRequests.AsNoTracking()
+            .Select(x => ResponseFromEntity(x))
+            .ToListAsync();
+
+        return Ok(requests);
+    }
+
     [HttpPost]
     public async Task<ActionResult<EquipmentRequestResponse>> Create([FromBody] CreateEquipmentRequestRequest request) {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -60,40 +119,6 @@ public sealed class RequestsController : ControllerBase {
             .FirstAsync();
 
         return CreatedAtAction(nameof(GetById), new { id = entity.Id }, response);
-    }
-
-    [HttpGet]
-    public async Task<ActionResult<IEnumerable<EquipmentRequestResponse>>> GetMyRequests() {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (userIdClaim is null) {
-            return Unauthorized(ApiErrors.Unauthorized);
-        }
-
-        var userId = Guid.Parse(userIdClaim);
-        var requests = await _db.EquipmentRequests
-            .AsNoTracking()
-            .Where(x => x.UserId == userId)
-            .Select(x => ResponseFromEntity(x))
-            .ToListAsync();
-
-        return Ok(requests);
-    }
-
-    [HttpGet("manager")]
-    [Authorize(Policy = "StrictAdmin")]
-    public async Task<ActionResult<IEnumerable<EquipmentRequestResponse>>> GetManagerRequests(
-        [FromQuery] RequestStatus? status = null
-    ) {
-        var query = _db.EquipmentRequests.AsNoTracking().AsQueryable();
-        if (status.HasValue) {
-            query = query.Where(x => x.Status == status.Value);
-        }
-
-        var requests = await query
-            .Select(x => ResponseFromEntity(x))
-            .ToListAsync();
-
-        return Ok(requests);
     }
 
     [HttpPut("{id:guid}/approve")]
@@ -163,21 +188,6 @@ public sealed class RequestsController : ControllerBase {
         await _db.SaveChangesAsync();
 
         return NoContent();
-    }
-
-    [HttpGet("{id:guid}")]
-    public async Task<ActionResult<EquipmentRequestResponse>> GetById(Guid id) {
-        var request = await _db.EquipmentRequests
-            .AsNoTracking()
-            .Where(x => x.Id == id)
-            .Select(x => ResponseFromEntity(x))
-            .FirstOrDefaultAsync();
-
-        if (request is null) {
-            return NotFound(ApiErrors.NotFound("Request was not found."));
-        }
-
-        return Ok(request);
     }
 
     private static EquipmentRequestResponse ResponseFromEntity(EquipmentRequest x) => new(
