@@ -1,4 +1,3 @@
-// AdminInventory.tsx
 import { useState, useEffect } from 'react';
 import Topbar from "../../components/topBar/topBar";
 import AdminSidebar from "../../components/adminSideBar/adminSideBar";
@@ -50,18 +49,6 @@ const AdminInventory = () => {
   const [loading, setLoading] = useState(true);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-
-   if (authLoading) {
-    return (
-      <>
-        <Topbar isAdmin={true} onMenuClick={() => setSidebarOpen(true)} />
-        <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className={styles.loadingContainer}>
-          <div>Verifying access...</div>
-        </div>
-      </>
-    );
-  }
 
   const handleSelectItem = (id: string) => {
   if (selectedItems.includes(id)) {
@@ -362,6 +349,18 @@ const handleAction = async (action: string, itemId: string | null) => {
   if (loading) {
     return <div>Loading inventory...</div>;
   }
+     if (authLoading) {
+    return (
+      <>
+        <Topbar isAdmin={true} onMenuClick={() => setSidebarOpen(true)} />
+        <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className={styles.loadingContainer}>
+          <div>Verifying access...</div>
+        </div>
+      </>
+    );
+  }
+
 
   return (
     <>
