@@ -1,5 +1,3 @@
-
-// AdminPanel.tsx - Fixed layout
 import { useState, useEffect, type ReactNode } from 'react';
 import Topbar from "../../components/topBar/topBar";
 import AdminSidebar from '../../components/adminSideBar/adminSideBar';
@@ -13,12 +11,32 @@ import ButtonGroup from '@mui/material/ButtonGroup';
 import Chip from '@mui/material/Chip';
 import Avatar from '@mui/material/Avatar';
 import Tooltip from '@mui/material/Tooltip';
+import { useAdminGuard } from '../../hooks/useAdminGuard'; 
+
 
 const API_BASE = "http://localhost:3001";
 
 const AdminPanel = () => {
+
+const fetchUsers = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/users', {
+        credentials: 'include'
+      });
+      const data = await response.json();
+      setUsers(data);
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+    }
+  };
+
+
+useEffect(() => {fetchUsers()}, []);
+
+    const { loading: authLoading } = useAdminGuard();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [totalItems, setTotalItems] = useState<number | null>(null);
+  var [users, setUsers] = useState<any[]>([])
 
   useEffect(() => {
     apiFetch(`${API_BASE}/api/equipment`)
@@ -30,6 +48,19 @@ const AdminPanel = () => {
   const [actionLimit, setActionLimit] = useState(25);
   const [requestFilter, setRequestFilter] = useState('all');
   const [requestLimit, setRequestLimit] = useState(25);   
+
+  if (authLoading) {
+    return (
+      <>
+        <Topbar isAdmin={true} onMenuClick={() => setSidebarOpen(true)} />
+        <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className={styles.loadingContainer}>
+          <div>Verifying access...</div>
+        </div>
+      </>
+    );
+  }
+
 
   return (
     <>
@@ -50,6 +81,9 @@ const AdminPanel = () => {
   marginLeft: sidebarOpen ? '240px' : '0',
   transition: 'margin-left 0.3s ease'
 }}>
+
+
+  
   {/* 3x2 Grid Layout */}
   <div className={styles.dashboardGrid}>
     
@@ -63,28 +97,28 @@ const AdminPanel = () => {
         
         <div className={styles.statsGrid}>
           {/* Users Section */}
-          <div className={styles.statSection}>
-            <h3>Users</h3>
-            <Divider />
-            <div className={styles.statItem}>
-              <span className={styles.statLabel}>
-                <Icon className={styles.statIcon}>people</Icon> Total Users:
-              </span>
-              <span className={styles.statValue}>—</span>
+            <div className={styles.statSection}>
+              <h3>Users</h3>
+              <Divider />
+              <div className={styles.statItem}>
+                <span className={styles.statLabel}>
+                  <Icon className={styles.statIcon}>people</Icon> Total Users:
+                </span>
+                <span className={styles.statValue}>{users.length}</span>
+              </div>
+              <div className={styles.statItem}>
+                <span className={styles.statLabel}>
+                  <Icon className={styles.statIcon}>admin_panel_settings</Icon> Admins:
+                </span>
+                <span className={styles.statValue}> {users.filter(user => user.role === 'Admin').length}</span>
+              </div>
+              <div className={styles.statItem}>
+                <span className={styles.statLabel}>
+                  <Icon className={styles.statIcon}>people</Icon> Online:
+                </span>
+                <span className={styles.statValue}>—</span>
+              </div>
             </div>
-            <div className={styles.statItem}>
-              <span className={styles.statLabel}>
-                <Icon className={styles.statIcon}>admin_panel_settings</Icon> Admins:
-              </span>
-              <span className={styles.statValue}>—</span>
-            </div>
-            <div className={styles.statItem}>
-              <span className={styles.statLabel}>
-                <Icon className={styles.statIcon}>people</Icon> Online:
-              </span>
-              <span className={styles.statValue}>—</span>
-            </div>
-          </div>
 
           {/* Items Section */}
           <div className={styles.statSection}>
@@ -130,7 +164,7 @@ const AdminPanel = () => {
               <span className={styles.statLabel}>
                 <Icon className={styles.statIcon}>inventory</Icon> Version:
               </span>
-              <span className={styles.statValue}>—</span>
+              <span className={styles.statValue}>1.00</span>
             </div>  
           </div>
         </div>

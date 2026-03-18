@@ -1,3 +1,4 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Ledger.Api.Auth;
 using Ledger.Api.Data;
@@ -150,17 +151,51 @@ public sealed class AuthController : ControllerBase {
     [HttpPost("refresh")]
     [AllowAnonymous]
     public async Task<IActionResult> Refresh() {
+<<<<<<< HEAD
+        var accessOk = Request.Cookies.TryGetValue("token", out var accessToken);
+        var refreshOk = Request.Cookies.TryGetValue("refreshToken", out var refreshToken);
+        if (!accessOk || !refreshOk) {
+            return BadRequest(new ProblemDetails {
+                Detail = "Missing access or refresh token.",
+=======
         if (!Request.Cookies.TryGetValue("refreshToken", out var refreshToken)) {
             return BadRequest(new ProblemDetails {
                 Detail = "Missing refresh token.",
+>>>>>>> 44efc212e85ad6b0c3c2923853adf969bc16f115
                 Status = StatusCodes.Status400BadRequest,
             });
         }
 
+<<<<<<< HEAD
+        var principal = _jwtTokenService.GetPrincipalFromExpiredToken(accessToken!);
+        if (principal == null) {
+            return BadRequest(new ProblemDetails {
+                Detail = "Invalid access token or refresh token.",
+                Status = StatusCodes.Status400BadRequest,
+            });
+        }
+
+        var userIdString = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+        if (!Guid.TryParse(userIdString, out var userId)) {
+            return BadRequest(new ProblemDetails {
+                Detail = "Invalid token claims.",
+                Status = StatusCodes.Status400BadRequest,
+            });
+        }
+
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
+        if (user == null ||
+            user.RefreshToken != refreshToken! ||
+            user.RefreshTokenExpiryTime <= DateTime.UtcNow
+        ) {
+            return BadRequest(new ProblemDetails {
+                Detail = "Invalid access token or refresh token.",
+=======
         var user = await _db.Users.FirstOrDefaultAsync(u => u.RefreshToken == refreshToken);
         if (user == null || user.RefreshTokenExpiryTime <= DateTime.UtcNow) {
             return BadRequest(new ProblemDetails {
                 Detail = "Invalid or expired refresh token.",
+>>>>>>> 44efc212e85ad6b0c3c2923853adf969bc16f115
                 Status = StatusCodes.Status400BadRequest,
             });
         }

@@ -1,4 +1,3 @@
-// AdminInventory.tsx
 import { useState, useEffect } from 'react';
 import Topbar from "../../components/topBar/topBar";
 import AdminSidebar from "../../components/adminSideBar/adminSideBar";
@@ -14,7 +13,8 @@ import Checkbox from '@mui/material/Checkbox';
 import Select from '@mui/material/Select';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
-import styles from './AdminInventory.module.css';
+import styles from './AdminInventory.module.css'; 
+import { useAdminGuard } from '../../hooks/useAdminGuard';
 
 interface Equipment {
   id: string;
@@ -36,6 +36,7 @@ import DialogActions from '@mui/material/DialogActions';
 import CircularProgress from '@mui/material/CircularProgress';
 
 const AdminInventory = () => {
+    const { loading: authLoading } = useAdminGuard();
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [activeItem, setActiveItem] = useState<string | null>(null);
@@ -50,7 +51,6 @@ const AdminInventory = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-
   const handleSelectItem = (id: string) => {
   if (selectedItems.includes(id)) {
     setSelectedItems(selectedItems.filter(itemId => itemId !== id));
@@ -58,6 +58,44 @@ const AdminInventory = () => {
     setSelectedItems([...selectedItems, id]);
   }
   };
+
+  const verifyAdmin = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    
+    // Get current user ID
+    const meResponse = await fetch('http://localhost:3001/api/auth/me', {
+      credentials: 'include'
+    });
+    
+    if (!meResponse.ok) {
+      throw new Error('Not authenticated');
+    }
+    
+    const me = await meResponse.json();
+    
+    // Verify actual role from truth source
+    const usersResponse = await fetch('http://localhost:3001/api/users', {
+      credentials: 'include',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (!usersResponse.ok) {
+      throw new Error('Failed to verify permissions');
+    }
+    
+    const users = await usersResponse.json();
+    const currentUser = users.find((u: any) => u.id === me.userId);
+    
+    if (!currentUser || currentUser.role !== 'Admin') {
+      throw new Error('Admin privileges required');
+    }
+    
+    return true;
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : 'Authentication failed');
+  }
+};
 
   const formatStatus = (status: string) => {
   const statusMap: Record<string, string> = {
@@ -156,7 +194,7 @@ const handleDeleteSelected = async () => {
     const failed = results.filter(r => !r.ok);
     if (failed.length > 0) {
       console.error(`${failed.length} items failed to delete`);
-      // You might want to show a warning here
+      alert(`${failed.length} items could not be deleted. You may not have permission.`);
     }
     
     // Refresh the equipment list
@@ -169,6 +207,7 @@ const handleDeleteSelected = async () => {
     
   } catch (error) {
     console.error('Failed to delete items:', error);
+    alert(error instanceof Error ? error.message : 'Failed to delete items');
   } finally {
     setDeleting(false);
   }
@@ -215,19 +254,19 @@ const handleAction = async (action: string, itemId: string | null) => {
   
   switch(action) {
     case 'available':
-      statusNumber = 0;  // Available
+      statusNumber = 0;
       break;
     case 'reserved':
-      statusNumber = 1;  // Reserved
+      statusNumber = 1;
       break;
     case 'borrow':
-      statusNumber = 2;  // CheckedOut
+      statusNumber = 2;
       break;
     case 'repair':
-      statusNumber = 3;  // UnderRepair
+      statusNumber = 3;
       break;
     case 'retired':
-      statusNumber = 4;  // Retired
+      statusNumber = 4;
       break;
     default:
       return;
@@ -246,10 +285,15 @@ const handleAction = async (action: string, itemId: string | null) => {
       setEquipment(data);
     } else {
       const errorData = await response.json();
-      console.error('Update failed:', errorData);
+      throw new Error(errorData.message || 'Failed to update status');
     }
+    
+    // Refresh the equipment list
+    await fetchEquipment();
+    
   } catch (error) {
     console.error('Failed to update status:', error);
+    alert(error instanceof Error ? error.message : 'Failed to update status');
   }
   
   handleActionClose();
@@ -292,6 +336,18 @@ const handleAction = async (action: string, itemId: string | null) => {
   if (loading) {
     return <div>Loading inventory...</div>;
   }
+     if (authLoading) {
+    return (
+      <>
+        <Topbar isAdmin={true} onMenuClick={() => setSidebarOpen(true)} />
+        <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className={styles.loadingContainer}>
+          <div>Verifying access...</div>
+        </div>
+      </>
+    );
+  }
+
 
   return (
     <>
