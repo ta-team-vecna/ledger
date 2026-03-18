@@ -44,9 +44,6 @@ const AdminUsers = () => {
       const token = localStorage.getItem('token');
       const response = await fetch('http://localhost:3001/api/users', {
         credentials: 'include',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
       });
       
       if (!response.ok) {
