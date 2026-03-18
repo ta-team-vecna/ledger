@@ -3,6 +3,7 @@
 import { useState, useEffect, type ReactNode } from 'react';
 import Topbar from "../../components/topBar/topBar";
 import AdminSidebar from '../../components/adminSideBar/adminSideBar';
+import { apiFetch } from '../../src/utils/apiFetch';
 import { Divider } from '@mui/material';
 import Icon from '@mui/material/Icon';
 import styles from './AdminPanel.module.css';
@@ -20,7 +21,7 @@ const AdminPanel = () => {
   const [totalItems, setTotalItems] = useState<number | null>(null);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/equipment`, { credentials: "include" })
+    apiFetch(`${API_BASE}/api/equipment`)
       .then(res => res.ok ? res.json() : Promise.reject())
       .then((data: unknown[]) => setTotalItems(data.length))
       .catch(() => setTotalItems(null));
