@@ -1,6 +1,7 @@
 ﻿using Ledger.Api.Data;
 using Ledger.Api.Domain;
 using Ledger.Api.Dto;
+using Ledger.Api.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -37,10 +38,7 @@ public sealed class EquipmentController : ControllerBase {
             .FirstOrDefaultAsync();
 
         if (item is null) {
-            return NotFound(new ProblemDetails {
-                Detail = "Equipment was not found.",
-                Status = StatusCodes.Status404NotFound,
-            });
+            return NotFound(ApiErrors.NotFound("Equipment was not found."));
         }
 
         return Ok(item);
@@ -53,10 +51,7 @@ public sealed class EquipmentController : ControllerBase {
             .AnyAsync(x => x.SerialNumber == request.SerialNumber);
 
         if (serialExists) {
-            return Conflict(new ProblemDetails {
-                Detail = "An equipment item with the provided serial number already exists.",
-                Status = StatusCodes.Status409Conflict,
-            });
+            return Conflict(ApiErrors.Conflict("An equipment item with the provided serial number already exists."));
         }
 
         var entity = new Equipment {
@@ -84,10 +79,7 @@ public sealed class EquipmentController : ControllerBase {
     public async Task<ActionResult<EquipmentResponse>> Update(Guid id, UpdateEquipmentRequest request) {
         var entity = await _db.Equipment.FirstOrDefaultAsync(x => x.Id == id);
         if (entity is null) {
-            return NotFound(new ProblemDetails {
-                Detail = "Equipment was not found.",
-                Status = StatusCodes.Status404NotFound,
-            });
+            return NotFound(ApiErrors.NotFound("Equipment was not found."));
         }
 
         entity.Name = request.Name.Trim();
@@ -108,10 +100,7 @@ public sealed class EquipmentController : ControllerBase {
     public async Task<IActionResult> UpdateStatus(Guid id, UpdateEquipmentStatusRequest request) {
         var entity = await _db.Equipment.FirstOrDefaultAsync(x => x.Id == id);
         if (entity is null) {
-            return NotFound(new ProblemDetails {
-                Detail = "Equipment was not found.",
-                Status = StatusCodes.Status404NotFound,
-            });
+            return NotFound(ApiErrors.NotFound("Equipment was not found."));
         }
 
         entity.Status = request.Status;
@@ -119,16 +108,13 @@ public sealed class EquipmentController : ControllerBase {
 
         return NoContent();
     }
-    
+
     [HttpDelete("{id:guid}")]
     [Authorize(Policy = "StrictAdmin")]
     public async Task<IActionResult> Delete(Guid id) {
         var entity = await _db.Equipment.FirstOrDefaultAsync(x => x.Id == id);
         if (entity is null) {
-            return NotFound(new ProblemDetails {
-                Detail = "Equipment was not found.",
-                Status = StatusCodes.Status404NotFound,
-            });
+            return NotFound(ApiErrors.NotFound("Equipment was not found."));
         }
 
         _db.Remove(entity);
