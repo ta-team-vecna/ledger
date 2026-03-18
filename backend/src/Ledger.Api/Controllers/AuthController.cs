@@ -34,12 +34,10 @@ public sealed class AuthController : ControllerBase {
             HttpOnly = true,
             Secure = false, // Set to true in production with HTTPS
             SameSite = SameSiteMode.Lax,
+            Expires = DateTimeOffset.UtcNow.AddDays(7),
         };
 
-        cookieOptions.Expires = DateTimeOffset.UtcNow.AddMinutes(15);
         Response.Cookies.Append("token", accessToken, cookieOptions);
-
-        cookieOptions.Expires = DateTimeOffset.UtcNow.AddDays(7);
         Response.Cookies.Append("refreshToken", refreshToken, cookieOptions);
     }
 
