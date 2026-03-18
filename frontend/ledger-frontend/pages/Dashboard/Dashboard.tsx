@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import styles from "./Dashboard.module.css";
 import { Button } from "@mui/material";
 import Topbar from "../../components/topBar/topBar";
+import { apiFetch } from '../../src/utils/apiFetch';
 import Icon from "@mui/material/Icon";
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
@@ -18,7 +19,7 @@ const Dashboard = () => {
   const [totalItems, setTotalItems] = useState<number | null>(null);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/equipment`, { credentials: "include" })
+    apiFetch(`${API_BASE}/api/equipment`)
       .then(res => res.ok ? res.json() : Promise.reject())
       .then((data: unknown[]) => setTotalItems(data.length))
       .catch(() => setTotalItems(null));

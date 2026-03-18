@@ -27,6 +27,7 @@ interface Equipment {
   photoUrl?: string;
   requiresAdminApproval: boolean;
 }
+import { apiFetch } from '../../src/utils/apiFetch';
 import AddItemModal from '../../components/Admin/addItemModal';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -113,10 +114,9 @@ const AdminInventory = () => {
   useEffect(() => {
   const fetchEquipment = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/equipment', {
-        credentials: 'include', 
-        headers: { 
-          'Content-Type': 'application/json'  
+      const response = await apiFetch('http://localhost:3001/api/equipment', {
+        headers: {
+          'Content-Type': 'application/json'
         }
       });
       
@@ -144,10 +144,9 @@ const handleDeleteSelected = async () => {
   
   try {
     // Delete each selected item
-    const deletePromises = selectedItems.map(id => 
-      fetch(`http://localhost:3001/api/equipment/${id}`, {
+    const deletePromises = selectedItems.map(id =>
+      apiFetch(`http://localhost:3001/api/equipment/${id}`, {
         method: 'DELETE',
-        credentials: 'include'
       })
     );
     
@@ -177,10 +176,9 @@ const handleDeleteSelected = async () => {
 
 const fetchEquipment = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/equipment', {
-        credentials: 'include', 
-        headers: { 
-          'Content-Type': 'application/json'  
+      const response = await apiFetch('http://localhost:3001/api/equipment', {
+        headers: {
+          'Content-Type': 'application/json'
         }
       });
       
@@ -236,17 +234,14 @@ const handleAction = async (action: string, itemId: string | null) => {
   }
   
   try {
-    const response = await fetch(`http://localhost:3001/api/equipment/${itemId}`, {
-      method: 'PATCH',
-      credentials: 'include',
+    const response = await apiFetch(`http://localhost:3001/api/equipment/${itemId}/status`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: statusNumber })  // 👈 Send number!
+      body: JSON.stringify({ status: statusNumber })
     });
-    
+
     if (response.ok) {
-      const fetchResponse = await fetch('http://localhost:3001/api/equipment', {
-        credentials: 'include'
-      });
+      const fetchResponse = await apiFetch('http://localhost:3001/api/equipment');
       const data = await fetchResponse.json();
       setEquipment(data);
     } else {
