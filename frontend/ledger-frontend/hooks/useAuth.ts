@@ -46,7 +46,7 @@ export const useAuth = () => {
             firstName: currentUser.firstName,
             lastName: currentUser.lastName,
             email: currentUser.email,
-            role: currentUser.role  // ✅ REAL role from DB!
+            role: currentUser.role  
           };
           setUser(userData);
           return userData;

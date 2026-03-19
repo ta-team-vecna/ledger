@@ -1,12 +1,19 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export const useAdminGuard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // If not on an admin route, don't do anything
+    if (!location.pathname.startsWith('/admin')) {
+      setLoading(false);
+      return;
+    }
+
     const verifyAdmin = async () => {
       try {
         const token = localStorage.getItem('token');
@@ -52,7 +59,7 @@ export const useAdminGuard = () => {
     };
 
     verifyAdmin();
-  }, [navigate]);
+  }, [navigate, location.pathname]);
 
   return { isAdmin, loading };
 };

@@ -35,7 +35,7 @@ public sealed class RequestsController : ControllerBase {
         return Ok(request);
     }
 
-    [HttpGet]
+    [HttpGet("me")]
     public async Task<ActionResult<IEnumerable<EquipmentRequestResponse>>> GetMyRequests() {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (userIdClaim is null) {

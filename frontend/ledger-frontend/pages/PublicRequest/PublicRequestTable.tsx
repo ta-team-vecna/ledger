@@ -12,12 +12,10 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import TextareaAutosize from '@mui/material/TextareaAutosize';
 import styles from "./PublicRequestTable.module.css";
+import { useAuth } from "../../src/context/useAuth";
 
 interface Request {
   id: string;
-  userId: string;
-  userFullName: string;
-  equipmentId: string;
   equipmentName: string;
   equipmentSerialNumber: string;
   status: 'Pending' | 'Approved' | 'Rejected' | 'Returned';
@@ -28,36 +26,27 @@ interface Request {
   returnedAtUtc: string | null;
   adminComment: string | null;
   returnConditionNotes: string | null;
-  approvedAtUtc: string;
 }
 
 const RequestsTable = () => {
+  const { user, isLoading: authLoading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
   const [returnNotes, setReturnNotes] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  // Get current user
-  useEffect(() => {
-    fetch('http://localhost:3001/api/auth/me', { credentials: 'include' })
-      .then(res => res.json())
-      .then(data => setCurrentUserId(data.userId))
-      .catch(console.error);
-  }, []);
-
-  // Fetch requests
+  // Fetch user's requests directly from the API
   const fetchRequests = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/requests/all', { credentials: 'include' });
+      const res = await fetch('http://localhost:3001/api/requests/me', { 
+        credentials: 'include' 
+      });
       const data = await res.json();
-      setRequests(Array.isArray(data) ? data : Object.values(data));
+      setRequests(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Failed to fetch requests:', error);
     } finally {
@@ -66,34 +55,11 @@ const RequestsTable = () => {
   };
 
   useEffect(() => {
-    fetchRequests();
-  }, []);
-
-  // Get display status (handles Reserved/Overdue logic)
-  const getDisplayStatus = (req: Request) => {
-    const now = new Date();
-    const start = new Date(req.requestedFromUtc);
-    const end = new Date(req.requestedToUtc);
-    
-    // If returned, show returned
-    if (req.status === 'Returned') return { text: 'Returned', color: '#9c27b0', icon: 'assignment_return' };
-    
-    // If Rejected, show Rejected
-    if (req.status === 'Rejected') return { text: 'Rejected', color: '#f44336', icon: 'cancel' };
-    
-    // If approved, check dates
-    if (req.status === 'Approved') {
-      if (now < start) return { text: 'Reserved', color: '#ffc107', icon: 'event' };
-      if (now > end) return { text: 'Overdue', color: '#ff9800', icon: 'warning' };
-      if (req.checkedOutAtUtc) return { text: 'Checked Out', color: '#1976d2', icon: 'sync_alt' };
-      return { text: 'Approved', color: '#4caf50', icon: 'check_circle' };
+    if (user) {
+      fetchRequests();
     }
-    
-    // Pending
-    return { text: 'Pending', color: '#ff9800', icon: 'hourglass_empty' };
-  };
+  }, [user]);
 
-  // Actions
   const handleReturn = async () => {
     if (!selectedRequest) return;
     setActionLoading(true);
@@ -120,30 +86,36 @@ const RequestsTable = () => {
     }
   };
 
-  // Filtering
-  const userRequests = requests.filter(r => r.userId === currentUserId);
-  
-  const filteredRequests = userRequests.filter(req => {
-    const matchesSearch = searchTerm === '' || 
-      req.equipmentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      req.equipmentSerialNumber.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const displayStatus = getDisplayStatus(req).text;
-    const matchesStatus = statusFilter === 'all' || displayStatus === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
+  const getStatusDisplay = (req: Request) => {
+    const now = new Date();
+    const start = new Date(req.requestedFromUtc);
+    const end = new Date(req.requestedToUtc);
+
+    if (req.status === 'Returned') {
+      return { text: 'Returned', color: '#9c27b0', icon: 'assignment_return' };
+    }
+    if (req.status === 'Rejected') {
+      return { text: 'Rejected', color: '#f44336', icon: 'cancel' };
+    }
+    if (req.status === 'Pending') {
+      return { text: 'Pending', color: '#ff9800', icon: 'hourglass_empty' };
+    }
+    if (req.status === 'Approved') {
+      if (now < start) return { text: 'Reserved', color: '#ffc107', icon: 'event' };
+      if (now > end) return { text: 'Overdue', color: '#ff9800', icon: 'warning' };
+      if (req.checkedOutAtUtc) return { text: 'Checked Out', color: '#1976d2', icon: 'sync_alt' };
+      return { text: 'Approved', color: '#4caf50', icon: 'check_circle' };
+    }
+    return { text: 'Unknown', color: '#999', icon: 'help' };
+  };
 
   const formatDate = (date: string) => new Date(date).toLocaleDateString();
 
-  const statusButtons = ['all', 'Pending', 'Approved', 'Reserved', 'Checked Out', 'Overdue', 'Returned', 'Rejected'];
-
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <>
-        <Topbar onMenuClick={() => setSidebarOpen(true)} />
-        <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className={styles.loadingContainer}>Loading...</div>
+           <Topbar onMenuClick={() => setSidebarOpen(true)} />
+        <div className={styles.loadingContainer}>Loading your requests...</div>
       </>
     );
   }
@@ -161,61 +133,27 @@ const RequestsTable = () => {
           <h1>My Requests</h1>
         </div>
 
-        {/* Filters */}
-        <div className={styles.filterBar}>
-          {statusButtons.map(status => (
-            <Button
-              key={status}
-              variant={statusFilter === status ? 'contained' : 'outlined'}
-              onClick={() => setStatusFilter(status)}
-            >
-              {status === 'all' ? 'All' : status}
-            </Button>
-          ))}
-        </div>
-
-        {/* Search */}
-        <div className={styles.searchBar}>
-          <TextField
-            fullWidth
-            size="small"
-            placeholder="Search equipment..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Icon className={styles.searchIcon}>search</Icon>
-                </InputAdornment>
-              )
-            }}
-          />
-        </div>
-
-        {/* Table */}
-        <div className={styles.tableContainer}>
-          <table className={styles.requestsTable}>
-            <thead>
-              <tr>
-                <th>Equipment</th>
-                <th>Serial #</th>
-                <th>Period</th>
-                <th>Status</th>
-                <th>Requested</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRequests.length === 0 ? (
+        {requests.length === 0 ? (
+          <div className={styles.emptyState}>
+            <Icon className={styles.emptyIcon}>inbox</Icon>
+            <p>You haven't made any requests yet</p>
+          </div>
+        ) : (
+          <div className={styles.tableContainer}>
+            <table className={styles.requestsTable}>
+              <thead>
                 <tr>
-                  <td colSpan={6} className={styles.emptyState}>
-                    <Icon className={styles.emptyIcon}>inbox</Icon>
-                    <p>No requests</p>
-                  </td>
+                  <th>Equipment</th>
+                  <th>Serial #</th>
+                  <th>Period</th>
+                  <th>Status</th>
+                  <th>Requested</th>
+                  <th>Actions</th>
                 </tr>
-              ) : (
-                filteredRequests.map(req => {
-                  const display = getDisplayStatus(req);
+              </thead>
+              <tbody>
+                {requests.map(req => {
+                  const display = getStatusDisplay(req);
                   return (
                     <tr key={req.id}>
                       <td>{req.equipmentName}</td>
@@ -250,15 +188,11 @@ const RequestsTable = () => {
                       </td>
                     </tr>
                   );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className={styles.footer}>
-          Showing {filteredRequests.length} of {userRequests.length}
-        </div>
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Details Dialog */}
@@ -270,12 +204,12 @@ const RequestsTable = () => {
                 <Icon className={styles.dialogIcon}>assignment</Icon>
                 Request Details
                 <Chip
-                  label={getDisplayStatus(selectedRequest).text}
+                  label={getStatusDisplay(selectedRequest).text}
                   size="small"
                   style={{
-                    backgroundColor: `${getDisplayStatus(selectedRequest).color}20`,
-                    color: getDisplayStatus(selectedRequest).color,
-                    borderColor: getDisplayStatus(selectedRequest).color
+                    backgroundColor: `${getStatusDisplay(selectedRequest).color}20`,
+                    color: getStatusDisplay(selectedRequest).color,
+                    borderColor: getStatusDisplay(selectedRequest).color
                   }}
                 />
               </div>
@@ -303,8 +237,7 @@ const RequestsTable = () => {
             <DialogActions>
               <Button onClick={() => setDetailsOpen(false)}>Close</Button>
               
-              {/* Show return button only if checked out and not already returned */}
-              {selectedRequest.checkedOutAtUtc || selectedRequest.status === "Approved" && !selectedRequest.returnedAtUtc && (
+              {selectedRequest.checkedOutAtUtc && !selectedRequest.returnedAtUtc && (
                 <Button
                   onClick={() => setReturnDialogOpen(true)}
                   color="primary"

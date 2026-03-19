@@ -82,7 +82,7 @@ const AdminPanel = () => {
       credentials: 'include'
     });
     const data = await response.json();
-    console.log('Raw request data:', data); // 👈 See what the API returns
+    console.log('Raw request data:', data);
     
     const transformed = (Array.isArray(data) ? data : Object.values(data)).map((req: any) => ({
       id: req.id, // Make sure this exists in the API response
