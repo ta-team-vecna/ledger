@@ -25,16 +25,6 @@ interface User {
   createdAtUtc: string;
 }
 
-interface Request {
-  userFullName: string;
-  userRole?: string;
-  equipmentName: string;
-  requestedFromUtc: string;
-  requestedToUtc: string;
-  requestedAtUtc: string;
-  status: string;
-}
-
 interface TransformedRequest {
   user: string;
   role: string;

@@ -14,8 +14,6 @@ const AdminInventory = lazy(() => import('../../pages/Admin/AdminInventory'));
 const AdminRequests = lazy(() => import('../../pages/Admin/AdminRequests'));
 //const AdminSettings = lazy(() => import('../../pages/Admin/AdminSettings'))
 
-const PublicRequestTable = lazy(() => import('../../pages/PublicRequest/PublicRequestTable'));
-
 const withSuspense = (element: React.ReactNode) => (
   <Suspense fallback={<LoadingSpinner />}>{element}</Suspense>
 );

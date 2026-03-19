@@ -7,7 +7,6 @@ import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 import Chip from '@mui/material/Chip';
 import Avatar from '@mui/material/Avatar';
-import { Divider } from '@mui/material';
 import styles from './AdminRequests.module.css';
 import { useAdminGuard } from '../../hooks/useAdminGuard';      
 import Dialog from '@mui/material/Dialog';
@@ -82,9 +81,7 @@ const AdminRequests = () => {
     return statusConfig[status]?.color || '#999';
   };
 
-  const getStatusLabel = (status: string) => {
-    return statusConfig[status]?.label || status;
-  };
+
 
   const handleApprove = async (requestId: string) => {
     setActionLoading(true);

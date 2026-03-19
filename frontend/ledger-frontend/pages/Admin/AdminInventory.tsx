@@ -6,7 +6,6 @@ import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 import Chip from '@mui/material/Chip';
-import Avatar from '@mui/material/Avatar';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Checkbox from '@mui/material/Checkbox';
@@ -80,7 +79,7 @@ const AdminInventory = () => {
   
   // Data State
   const [equipment, setEquipment] = useState<Equipment[]>([]);
-  const [requests, setRequests] = useState<Request[]>([]);
+  const [requests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Modal State
