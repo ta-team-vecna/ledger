@@ -24,7 +24,7 @@ interface EquipmentRequest {
   equipmentId: string;
   equipmentName: string;
   equipmentSerialNumber: string;
-  status: string; // Backend sends: 'Pending', 'Approved', 'Denied', 'Returned'
+  status: string; // Backend sends: 'Pending', 'Approved', 'Rejected', 'Returned'
   requestedAtUtc: string;
   requestedFromUtc: string;
   requestedToUtc: string;
@@ -73,7 +73,7 @@ const AdminRequests = () => {
   const statusConfig: Record<string, { color: string; label: string }> = {
     'Pending': { color: '#ff9800', label: 'Pending' },
     'Approved': { color: '#4caf50', label: 'Approved' },
-    'Denied': { color: '#f44336', label: 'Denied' },
+    'Rejected': { color: '#f44336', label: 'Rejected' },
     'Returned': { color: '#9c27b0', label: 'Returned' }
   };
 
@@ -151,7 +151,7 @@ const AdminRequests = () => {
     const statusMap: Record<string, string> = {
       'Pending': 'Pending',
       'Approved': 'Approved',
-      'Denied': 'Denied',
+      'Rejected': 'Rejected',
       'CheckedOut': 'Checked Out',
       'Checked Out': 'Checked Out',
       'Returned': 'Returned'
@@ -159,7 +159,7 @@ const AdminRequests = () => {
     return statusMap[status] || status;
   };
 
-  const statusButtons = ['all', 'Pending', 'Approved', 'Denied', 'Returned'];
+  const statusButtons = ['all', 'Pending', 'Approved', 'Rejected', 'Returned'];
 
 
   if (authLoading || loading) {

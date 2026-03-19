@@ -20,7 +20,7 @@ interface Request {
   equipmentId: string;
   equipmentName: string;
   equipmentSerialNumber: string;
-  status: 'Pending' | 'Approved' | 'Denied' | 'Returned';
+  status: 'Pending' | 'Approved' | 'Rejected' | 'Returned';
   requestedAtUtc: string;
   requestedFromUtc: string;
   requestedToUtc: string;
@@ -78,8 +78,8 @@ const RequestsTable = () => {
     // If returned, show returned
     if (req.status === 'Returned') return { text: 'Returned', color: '#9c27b0', icon: 'assignment_return' };
     
-    // If denied, show denied
-    if (req.status === 'Denied') return { text: 'Denied', color: '#f44336', icon: 'cancel' };
+    // If Rejected, show Rejected
+    if (req.status === 'Rejected') return { text: 'Rejected', color: '#f44336', icon: 'cancel' };
     
     // If approved, check dates
     if (req.status === 'Approved') {
@@ -136,7 +136,7 @@ const RequestsTable = () => {
 
   const formatDate = (date: string) => new Date(date).toLocaleDateString();
 
-  const statusButtons = ['all', 'Pending', 'Approved', 'Reserved', 'Checked Out', 'Overdue', 'Returned', 'Denied'];
+  const statusButtons = ['all', 'Pending', 'Approved', 'Reserved', 'Checked Out', 'Overdue', 'Returned', 'Rejected'];
 
   if (loading) {
     return (

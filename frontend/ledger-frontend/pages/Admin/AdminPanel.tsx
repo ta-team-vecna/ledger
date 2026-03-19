@@ -25,14 +25,16 @@ interface User {
   createdAtUtc: string;
 }
 
+
 interface TransformedRequest {
+    id: string; 
   user: string;
   role: string;
   item: string;
   quantity: number;
   duration: string;
   timeAgo: string;
-  status: string;
+    status: string;
   urgent: boolean;
 }
 
@@ -74,31 +76,34 @@ const AdminPanel = () => {
   }, []);
 
   // Fetch recent requests
-  const fetchRecentRequests = async () => {
-    try {
-      const response = await fetch('http://localhost:3001/api/requests', {
-        credentials: 'include'
-      });
-      const data = await response.json();
-      
-      const transformed = data.map((req: any) => ({
-        user: req.userFullName,
-        role: req.userRole || 'User',
-        item: req.equipmentName,
-        quantity: 1,
-        duration: getDurationString(req.requestedFromUtc, req.requestedToUtc),
-        timeAgo: formatTimeAgo(req.requestedAtUtc),
-        status: req.status.toLowerCase(),
-        urgent: isUrgent(req)
-      }));
-      
-      setRecentRequests(transformed);
-    } catch (error) {
-      console.error('Failed to fetch recent requests:', error);
-    } finally {
-      setRecentLoading(false);
-    }
-  };
+ const fetchRecentRequests = async () => {
+  try {
+    const response = await fetch('http://localhost:3001/api/requests/all', {
+      credentials: 'include'
+    });
+    const data = await response.json();
+    console.log('Raw request data:', data); // 👈 See what the API returns
+    
+    const transformed = (Array.isArray(data) ? data : Object.values(data)).map((req: any) => ({
+      id: req.id, // Make sure this exists in the API response
+      user: req.userFullName,
+      role: req.userRole || 'User',
+      item: req.equipmentName,
+      quantity: 1,
+      duration: getDurationString(req.requestedFromUtc, req.requestedToUtc),
+      timeAgo: formatTimeAgo(req.requestedAtUtc),
+      status: req.status.toLowerCase(),
+      urgent: isUrgent(req)
+    }));
+    
+    console.log('Transformed requests:', transformed);
+    setRecentRequests(transformed);
+  } catch (error) {
+    console.error('Failed to fetch recent requests:', error);
+  } finally {
+    setRecentLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchRecentRequests();
@@ -127,6 +132,40 @@ const AdminPanel = () => {
   const filteredRequests = recentRequests
     .filter(req => requestFilter === 'all' || req.status === requestFilter)
     .slice(0, requestLimit);
+
+const handleApproveRequest = async (requestId: string) => {
+  try {
+    const response = await fetch(`http://localhost:3001/api/requests/${requestId}/approve`, {
+      method: 'PUT',
+      credentials: 'include'
+    });
+    
+    if (!response.ok) throw new Error('Failed to approve request');
+    
+    // Refresh the requests list
+    await fetchRecentRequests();
+  } catch (error) {
+    console.error('Failed to approve request:', error);
+    alert('Failed to approve request');
+  }
+};
+
+const handleRejectRequest = async (requestId: string) => {
+  try {
+    const response = await fetch(`http://localhost:3001/api/requests/${requestId}/reject`, {
+      method: 'PUT',
+      credentials: 'include'
+    });
+    
+    if (!response.ok) throw new Error('Failed to reject request');
+    
+    // Refresh the requests list
+    await fetchRecentRequests();
+  } catch (error) {
+    console.error('Failed to reject request:', error);
+    alert('Failed to reject request');
+  }
+};
 
   if (authLoading) {
     return (
@@ -276,16 +315,16 @@ const AdminPanel = () => {
                     Approved
                   </Button>
                   <Button 
-                    variant={requestFilter === 'denied' ? 'contained' : 'outlined'}
-                    onClick={() => setRequestFilter('denied')}
+                    variant={requestFilter === 'rejected' ? 'contained' : 'outlined'}
+                    onClick={() => setRequestFilter('rejected')}
                   >
-                    Denied
+                    Rejected
                   </Button>
                   <Button 
                     variant={requestFilter === 'overdue' ? 'contained' : 'outlined'}
                     onClick={() => setRequestFilter('overdue')}
                   >
-                    Overdue ⚠️
+                    Overdue
                   </Button>
                 </ButtonGroup>
                 
@@ -370,28 +409,30 @@ const AdminPanel = () => {
                         </div>
                         
                         <div className={styles.requestActions}>
-                          {request.status === 'pending' && (
-                            <>
-                              <Button 
-                                size="small" 
-                                variant="contained" 
-                                color="success"
-                                className={styles.approveBtn}
-                                startIcon={<Icon>check</Icon>}
-                              >
-                                Approve
-                              </Button>
-                              <Button 
-                                size="small" 
-                                variant="outlined" 
-                                color="error"
-                                className={styles.denyBtn}
-                                startIcon={<Icon>close</Icon>}
-                              >
-                                Deny
-                              </Button>
-                            </>
-                          )}
+                         {request.status === 'pending' && (
+                          <>
+                            <Button 
+                              size="small" 
+                              variant="contained" 
+                              color="success"
+                              className={styles.approveBtn}
+                              startIcon={<Icon>check</Icon>}
+                              onClick={() => handleApproveRequest(request.id)}  
+                            >
+                              Approve
+                            </Button>
+                            <Button 
+                              size="small" 
+                              variant="outlined" 
+                              color="error"
+                              className={styles.denyBtn}
+                              startIcon={<Icon>close</Icon>}
+                              onClick={() => handleRejectRequest(request.id)}   
+                            >
+                              Deny
+                            </Button>
+                          </>
+                        )}
                           {request.status === 'approved' && (
                             <Button 
                               size="small" 
@@ -402,14 +443,14 @@ const AdminPanel = () => {
                               Already Approved
                             </Button>
                           )}
-                          {request.status === 'denied' && (
+                          {request.status === 'rejected' && (
                             <Button 
                               size="small" 
                               variant="text" 
                               disabled
                               className={styles.disabledBtn}
                             >
-                              Request Denied
+                              Request Rejected
                             </Button>
                           )}
                           {request.status === 'overdue' && (

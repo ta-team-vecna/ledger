@@ -149,7 +149,7 @@ const getDisplayStatus = (item: Equipment): string => {
   const itemRequests = requests.filter(r => r.equipmentId === item.id);
   const activeRequest = itemRequests
     .sort((a, b) => new Date(b.requestedAtUtc).getTime() - new Date(a.requestedAtUtc).getTime())
-    .find(r => r.status !== 'Returned' && r.status !== 'Denied');
+    .find(r => r.status !== 'Returned' && r.status !== 'Rejected');
 
   if (!activeRequest) return item.status;
 
@@ -500,7 +500,7 @@ const getDisplayStatus = (item: Equipment): string => {
                       {isItemInUse(item.id) ? (
                         <Chip
                           icon={<Icon className={styles.statusIcon}>block</Icon>}
-                          label="IN USE"
+                          label="CHECKED OUT/RESERVED"
                           size="small"
                           className={styles.statusChip}
                           style={{

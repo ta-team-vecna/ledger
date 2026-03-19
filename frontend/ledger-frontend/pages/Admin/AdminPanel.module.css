@@ -235,7 +235,7 @@ html, body {
 
 .requestItem.pending { border-left-color: #ff9800; }
 .requestItem.approved { border-left-color: #4caf50; }
-.requestItem.denied { border-left-color: #f44336; }
+.requestItem.rejected { border-left-color: #f44336; }
 .requestItem.overdue { border-left-color: #ff5252; }
 
 .requestHeader {
@@ -312,7 +312,7 @@ html, body {
 
 .statusBadge.pending { background-color: #fff3e0; color: #e65100; }
 .statusBadge.approved { background-color: #e8f5e8; color: #2e7d32; }
-.statusBadge.denied { background-color: #ffebee; color: #c62828; }
+.statusBadge.rejected { background-color: #ffebee; color: #c62828; }
 
 .urgentTag {
   background-color: #ff5252;
