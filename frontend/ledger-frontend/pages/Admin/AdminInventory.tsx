@@ -17,6 +17,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import CircularProgress from '@mui/material/CircularProgress';
+import Tooltip from '@mui/material/Tooltip';
 import styles from './AdminInventory.module.css';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 import { apiFetch } from '../../src/utils/apiFetch';
@@ -54,7 +55,7 @@ const STATUS_CONFIG: Record<string, { color: string; icon: string; label: string
   'Retired': { color: '#9e9e9e', icon: 'delete_forever', label: 'Retired' },
   'Overdue': { color: '#ff9800', icon: 'warning', label: 'Overdue' },
   'Unavailable': { color: '#f44336', icon: 'cancel', label: 'Unavailable' },
-  'Returned': { color: '#9c27b0', icon: 'assignment_return', label: 'Returned' }
+  'Returned': { color: '#9c27b0', icon: 'assignment_return', label: 'Returned' }  
 };
 
 // Status number mapping for API
@@ -79,7 +80,7 @@ const AdminInventory = () => {
   
   // Data State
   const [equipment, setEquipment] = useState<Equipment[]>([]);
-  const [requests] = useState<Request[]>([]);
+  const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Modal State
@@ -95,13 +96,16 @@ const AdminInventory = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [equipRes] = await Promise.all([
-        apiFetch('http://localhost:3001/api/equipment')
+      const [equipRes, reqRes] = await Promise.all([
+        apiFetch('http://localhost:3001/api/equipment'),
+        apiFetch('http://localhost:3001/api/requests/all')
       ]);
       
       const equipData = await equipRes.json();
+      const reqData = await reqRes.json();
       
       setEquipment(equipData);
+      setRequests(Array.isArray(reqData) ? reqData : Object.values(reqData));
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {
@@ -113,31 +117,56 @@ const AdminInventory = () => {
     fetchData();
   }, []);
 
+
+const isItemInUse = (itemId: string): boolean => {
+  const item = equipment.find(e => e.id === itemId);
+  if (!item) return false;
+  
+  // Check if item is checked out
+  if (item.status === 'CheckedOut') return true;
+  
+  // Check if there's an active request
+  const activeRequest = requests.find(r => 
+    r.equipmentId === itemId && 
+    r.status === 'Approved' && 
+    !r.returnedAtUtc &&
+    new Date() >= new Date(r.requestedFromUtc) && 
+    new Date() <= new Date(r.requestedToUtc)
+  );
+  
+  return !!activeRequest;
+};  
+
   // Calculate display status based on equipment and requests
-  const getDisplayStatus = (item: Equipment): string => {
+const getDisplayStatus = (item: Equipment): string => {
+  // First, trust what the equipment table says about its CURRENT state
+  if (item.status === 'CheckedOut') return 'CheckedOut';
+  if (item.status === 'UnderRepair') return 'UnderRepair';
+  if (item.status === 'Retired') return 'Retired';
+  if (item.status === 'Unavailable') return 'Unavailable';
+  
+  // Only use requests for future/predicted states
   const itemRequests = requests.filter(r => r.equipmentId === item.id);
   const activeRequest = itemRequests
     .sort((a, b) => new Date(b.requestedAtUtc).getTime() - new Date(a.requestedAtUtc).getTime())
     .find(r => r.status !== 'Returned' && r.status !== 'Denied');
 
-    if (!activeRequest) return item.status;
+  if (!activeRequest) return item.status;
 
-    const now = new Date();
-    const start = new Date(activeRequest.requestedFromUtc);
-    const end = new Date(activeRequest.requestedToUtc);
+  const now = new Date();
+  const start = new Date(activeRequest.requestedFromUtc);
+  const end = new Date(activeRequest.requestedToUtc);
 
-    if (activeRequest.returnedAtUtc) return 'Returned';
-    
-    if (activeRequest.status === 'Approved') {
-      if (now < start) return 'Reserved';
-      if (now > end) return 'Overdue';
-      if (activeRequest.checkedOutAtUtc) return 'CheckedOut';
-      return 'Available';
-    }
-    
-    return item.status;
-  };
-
+  if (activeRequest.returnedAtUtc) return 'Returned';
+  
+  if (activeRequest.status === 'Approved') {
+    if (now < start) return 'Reserved';
+    if (now > end) return 'Overdue';
+    return 'Available';
+  }
+  
+  return item.status;
+};
   // Get icon for equipment type
   const getTypeIcon = (type: string): string => {
     const icons: Record<string, string> = {
@@ -151,10 +180,82 @@ const AdminInventory = () => {
     return icons[type] || 'inventory';
   };
 
+  // Check if item can be modified
+  const canModifyItem = (itemId: string): { allowed: boolean; reason?: string } => {
+    const item = equipment.find(e => e.id === itemId);
+    if (!item) return { allowed: false, reason: 'Item not found' };
+
+    const activeRequest = requests.find(r => 
+      r.equipmentId === itemId && 
+      r.status === 'Approved' && 
+      !r.returnedAtUtc
+    );
+
+    if (activeRequest) {
+      const now = new Date();
+      const start = new Date(activeRequest.requestedFromUtc);
+      const end = new Date(activeRequest.requestedToUtc);
+      
+      if (now >= start && now <= end) {
+        return { allowed: false, reason: 'Item is currently checked out' };
+      }
+    }
+
+    return { allowed: true };
+  };
+
+  
+
   // Handle status change
   const handleStatusChange = async (action: string) => {
     if (!activeItem) return;
     
+    const item = equipment.find(e => e.id === activeItem);
+    if (!item) return;
+
+    const { allowed, reason } = canModifyItem(activeItem);
+    if (!allowed) {
+      alert(reason || 'Cannot modify this item');
+      handleActionClose();
+      return;
+    }
+
+    // Check for future reservations
+    const futureRequest = requests.find(r => 
+      r.equipmentId === activeItem && 
+      r.status === 'Approved' && 
+      !r.returnedAtUtc &&
+      new Date(r.requestedFromUtc) > new Date()
+    );
+
+    if (futureRequest) {
+      const confirmChange = window.confirm(
+        'This item has an approved future reservation'
+      );
+      if (!confirmChange) {
+        handleActionClose();
+        return;
+      }
+    }
+
+    // Check if trying to set to Available while checked out
+    if (action === 'available' && item.status === 'CheckedOut') {
+      const confirmReturn = window.confirm(
+        'Item is currently checked out. Mark as available?'
+      );
+      if (!confirmReturn) {
+        handleActionClose();
+        return;
+      }
+    }
+
+    // Prevent retiring non-available items
+    if (action === 'retired' && item.status !== 'Available') {
+      alert('Cannot retire an item that is not available');
+      handleActionClose();
+      return;
+    }
+
     const statusNumber = STATUS_NUMBER[action];
     if (statusNumber === undefined) return;
 
@@ -376,6 +477,8 @@ const AdminInventory = () => {
             <tbody>
               {filteredItems.map(item => {
                 const statusConfig = STATUS_CONFIG[item.status] || STATUS_CONFIG['Unavailable'];
+                const { allowed, reason } = canModifyItem(item.id);
+                
                 return (
                   <tr key={item.id} className={selectedItems.includes(item.id) ? styles.selectedRow : ''}>
                     {selectMode && (
@@ -394,45 +497,58 @@ const AdminInventory = () => {
                     </td>
                     <td className={styles.itemName}>{item.name}</td>
                     <td>
-                      <Chip
-                        icon={<Icon className={styles.statusIcon}>{statusConfig.icon}</Icon>}
-                        label={statusConfig.label}
-                        size="small"
-                        className={styles.statusChip}
-                        style={{
-                          backgroundColor: `${statusConfig.color}20`,
-                          color: statusConfig.color,
-                          borderColor: statusConfig.color
-                        }}
-                      />
+                      {isItemInUse(item.id) ? (
+                        <Chip
+                          icon={<Icon className={styles.statusIcon}>block</Icon>}
+                          label="IN USE"
+                          size="small"
+                          className={styles.statusChip}
+                          style={{
+                            backgroundColor: '#f4433620',
+                            color: '#f44336',
+                            borderColor: '#f44336'
+                          }}
+                        />
+                      ) : (
+                        <Chip
+                          icon={<Icon className={styles.statusIcon}>{statusConfig.icon}</Icon>}
+                          label={statusConfig.label}
+                          size="small"
+                          className={styles.statusChip}
+                          style={{
+                            backgroundColor: `${statusConfig.color}20`,
+                            color: statusConfig.color,
+                            borderColor: statusConfig.color
+                          }}
+                        />
+                      )}
                     </td>
                     <td>{item.location}</td>
                     <td>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        className={styles.actionButton}
-                        onClick={(e) => handleActionClick(e, item.id)}
-                        endIcon={<Icon>arrow_drop_down</Icon>}
-                      >
-                        Change
-                      </Button>
+                      <Tooltip title={!allowed ? reason : ''} arrow>
+                        <span>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            className={styles.actionButton}
+                            onClick={(e) => handleActionClick(e, item.id)}
+                            endIcon={<Icon>arrow_drop_down</Icon>}
+                            disabled={!allowed}
+                          >
+                            Change
+                          </Button>
+                        </span>
+                      </Tooltip>
                       <Menu
                         anchorEl={anchorEl}
                         open={activeItem === item.id}
                         onClose={handleActionClose}
                       >
-                        <MenuItem onClick={() => handleStatusChange('borrow')}>
-                          <Icon className={styles.menuIcon}>sync_alt</Icon> Borrow
-                        </MenuItem>
                         <MenuItem onClick={() => handleStatusChange('available')}>
                           <Icon className={styles.menuIcon}>check_circle</Icon> Available
                         </MenuItem>
                         <MenuItem onClick={() => handleStatusChange('repair')}>
                           <Icon className={styles.menuIcon}>build</Icon> Repair
-                        </MenuItem>
-                        <MenuItem onClick={() => handleStatusChange('reserved')}>
-                          <Icon className={styles.menuIcon}>event</Icon> Reserve
                         </MenuItem>
                         <MenuItem onClick={() => handleStatusChange('retired')}>
                           <Icon className={styles.menuIcon}>delete_forever</Icon> Retire

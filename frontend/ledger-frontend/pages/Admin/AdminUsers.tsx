@@ -6,14 +6,12 @@ import Icon from '@mui/material/Icon';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
-import Chip from '@mui/material/Chip';
 import Avatar from '@mui/material/Avatar';
 import Checkbox from '@mui/material/Checkbox';
 import Select from '@mui/material/Select';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
-import { Divider } from '@mui/material';
 import styles from './AdminUsers.module.css';
 import { useAuth } from '../../hooks/useAuth';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
@@ -25,7 +23,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 
 const AdminUsers = () => {
   const { loading: authLoading } = useAdminGuard();
-  const { user: currentUser, checkAuth } = useAuth();
+  const { user: currentUser} = useAuth();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);  
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
@@ -37,6 +35,9 @@ const AdminUsers = () => {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  
+
 
   
   const fetchUsers = async () => {
@@ -309,6 +310,7 @@ const AdminUsers = () => {
     setDeleting(false);
   }
 };
+
 
   return (
     <>
