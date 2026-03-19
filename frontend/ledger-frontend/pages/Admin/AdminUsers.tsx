@@ -42,7 +42,6 @@ const AdminUsers = () => {
   
   const fetchUsers = async () => {
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch('http://localhost:3001/api/users', {
         credentials: 'include',
       });
