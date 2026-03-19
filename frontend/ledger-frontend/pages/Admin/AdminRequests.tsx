@@ -13,9 +13,10 @@ import { useAdminGuard } from '../../hooks/useAdminGuard';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
+import DialogActions from '@mui/material/DialogActions';    
 import Tooltip from '@mui/material/Tooltip';
 import RequestModal from "../../components/modals/RequestModal"
+
 
 interface EquipmentRequest {
   id: string;
@@ -24,7 +25,7 @@ interface EquipmentRequest {
   equipmentId: string;
   equipmentName: string;
   equipmentSerialNumber: string;
-  status: string; // Use string instead of union to handle backend inconsistencies
+  status: string; // Backend sends: 'Pending', 'Approved', 'Denied', 'Returned'
   requestedAtUtc: string;
   requestedFromUtc: string;
   requestedToUtc: string;
@@ -47,7 +48,7 @@ const AdminRequests = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [requestModalOpen, setRequestModalOpen] = useState(false);
 
-  // Fetch requests with proper type handling
+  // Fetch requests
   const fetchRequests = async () => {
     try {
       const response = await fetch('http://localhost:3001/api/requests/all', {
@@ -56,19 +57,8 @@ const AdminRequests = () => {
       const data = await response.json();
       
       // Handle both array and object-with-keys responses
-      let requestsArray: EquipmentRequest[] = [];
-      if (Array.isArray(data)) {
-        requestsArray = data;
-      } else if (typeof data === 'object' && data !== null) {
-        // Handle the weird object-with-numeric-keys response
-        requestsArray = Object.values(data).map((item: any) => ({
-          ...item,
-          // Normalize status by removing spaces
-          status: typeof item.status === 'string' ? item.status.replace(/\s+/g, '') : item.status
-        }));
-      }
-      
-      setRequests(requestsArray);
+      const requestsArray = Array.isArray(data) ? data : Object.values(data);
+      setRequests(requestsArray as EquipmentRequest[]);
     } catch (error) {
       console.error('Failed to fetch requests:', error);
     } finally {
@@ -80,29 +70,20 @@ const AdminRequests = () => {
     fetchRequests();
   }, []);
 
-  // Normalize status for display
-  const getDisplayStatus = (status: string) => {
-    const statusMap: Record<string, string> = {
-      'Pending': 'Pending',
-      'Approved': 'Approved',
-      'Denied': 'Denied',
-      'CheckedOut': 'Checked Out',
-      'Checked Out': 'Checked Out',
-      'Returned': 'Returned'
-    };
-    return statusMap[status] || status;
+  // Status display mappings (backend sends these exact strings)
+  const statusConfig: Record<string, { color: string; label: string }> = {
+    'Pending': { color: '#ff9800', label: 'Pending' },
+    'Approved': { color: '#4caf50', label: 'Approved' },
+    'Denied': { color: '#f44336', label: 'Denied' },
+    'Returned': { color: '#9c27b0', label: 'Returned' }
   };
 
   const getStatusColor = (status: string) => {
-    const normalized = status.replace(/\s+/g, '');
-    const colors: Record<string, string> = {
-      'Pending': '#ff9800',
-      'Approved': '#4caf50',
-      'Denied': '#f44336',
-      'CheckedOut': '#1976d2',
-      'Returned': '#9c27b0'
-    };
-    return colors[normalized] || '#999';
+    return statusConfig[status]?.color || '#999';
+  };
+
+  const getStatusLabel = (status: string) => {
+    return statusConfig[status]?.label || status;
   };
 
   const handleApprove = async (requestId: string) => {
@@ -113,9 +94,7 @@ const AdminRequests = () => {
         credentials: 'include'
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to approve request: ${response.status}`);
-      }
+      if (!response.ok) throw new Error('Failed to approve request');
 
       await fetchRequests();
       setDetailsOpen(false);
@@ -135,9 +114,7 @@ const AdminRequests = () => {
         credentials: 'include'  
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to reject request: ${response.status}`);
-      }
+      if (!response.ok) throw new Error('Failed to reject request');
 
       await fetchRequests();
       setDetailsOpen(false);
@@ -166,15 +143,27 @@ const AdminRequests = () => {
       req.equipmentName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       req.equipmentSerialNumber?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const normalizedReqStatus = req.status?.replace(/\s+/g, '') || '';
-    const normalizedFilterStatus = statusFilter.replace(/\s+/g, '');
-    
-    const matchesStatus = statusFilter === 'all' || normalizedReqStatus === normalizedFilterStatus;
+    const matchesStatus = statusFilter === 'all' || req.status === statusFilter;
     
     return matchesSearch && matchesStatus;
   });
 
-  const statusButtons = ['all', 'Pending', 'Approved', 'CheckedOut', 'Returned', 'Denied'];
+
+  // Normalize status for display
+  const getDisplayStatus = (status: string) => {
+    const statusMap: Record<string, string> = {
+      'Pending': 'Pending',
+      'Approved': 'Approved',
+      'Denied': 'Denied',
+      'CheckedOut': 'Checked Out',
+      'Checked Out': 'Checked Out',
+      'Returned': 'Returned'
+    };
+    return statusMap[status] || status;
+  };
+
+  const statusButtons = ['all', 'Pending', 'Approved', 'Denied', 'Returned'];
+
 
   if (authLoading || loading) {
     return (
