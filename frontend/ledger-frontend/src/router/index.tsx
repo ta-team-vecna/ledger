@@ -2,16 +2,19 @@ import { lazy, Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AdminRoute, ProtectedRoute, PublicRoute } from '../components/RouteGuards';
 import LoadingSpinner from '../components/LoadingSpinner';
+import RequestsTable from '../../pages/PublicRequest/PublicRequestTable';
 
 const LoginPage = lazy(() => import('../../pages/LandPage/LoginPage'));
 const RegisterPage = lazy(() => import('../../pages/LandPage/RegisterPage'));
 const Dashboard = lazy(() => import('../../pages/Dashboard/Dashboard'));
-const AdminPanel = lazy(() => import('../../pages/Admin/AdminPanel')); // ✅ Keep this
+const AdminPanel = lazy(() => import('../../pages/Admin/AdminPanel')); 
 
 const AdminUsers = lazy(() => import('../../pages/Admin/AdminUsers'));
 const AdminInventory = lazy(() => import('../../pages/Admin/AdminInventory'));
 const AdminRequests = lazy(() => import('../../pages/Admin/AdminRequests'));
 //const AdminSettings = lazy(() => import('../../pages/Admin/AdminSettings'))
+
+const PublicRequestTable = lazy(() => import('../../pages/PublicRequest/PublicRequestTable'));
 
 const withSuspense = (element: React.ReactNode) => (
   <Suspense fallback={<LoadingSpinner />}>{element}</Suspense>
@@ -76,6 +79,14 @@ export const router = createBrowserRouter([
       <AdminRoute>
         <AdminRequests/>
       </AdminRoute>
+    )
+  },
+  {
+    path:'/requests',
+     element: withSuspense(
+      <ProtectedRoute>
+        <RequestsTable/>
+      </ProtectedRoute>
     )
   }
 ]);

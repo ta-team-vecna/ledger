@@ -1,4 +1,3 @@
-// pages/Admin/AdminRequests.tsx
 import { useState, useEffect } from 'react';
 import Topbar from "../../components/topBar/topBar";
 import AdminSidebar from "../../components/adminSideBar/adminSideBar";
@@ -8,12 +7,6 @@ import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 import Chip from '@mui/material/Chip';
 import Avatar from '@mui/material/Avatar';
-import Menu from '@mui/material/Menu';
-import MenuItem from '@mui/material/MenuItem';
-import Checkbox from '@mui/material/Checkbox';
-import Select from '@mui/material/Select';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
 import { Divider } from '@mui/material';
 import styles from './AdminRequests.module.css';
 import { useAdminGuard } from '../../hooks/useAdminGuard';      
@@ -21,7 +14,6 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
-import CircularProgress from '@mui/material/CircularProgress';
 import Tooltip from '@mui/material/Tooltip';
 import RequestModal from "../../components/modals/RequestModal"
 
@@ -32,7 +24,7 @@ interface EquipmentRequest {
   equipmentId: string;
   equipmentName: string;
   equipmentSerialNumber: string;
-  status: 'Pending' | 'Approved' | 'Denied' | 'Checked Out' | 'Returned';
+  status: string; // Use string instead of union to handle backend inconsistencies
   requestedAtUtc: string;
   requestedFromUtc: string;
   requestedToUtc: string;
@@ -55,18 +47,28 @@ const AdminRequests = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [requestModalOpen, setRequestModalOpen] = useState(false);
 
-
-  // Status filter buttons
-  const statusButtons = ['all', 'Pending', 'Approved', 'Denied', 'Checked Out', 'Returned'];
-
-   // Fetch requests
+  // Fetch requests with proper type handling
   const fetchRequests = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/requests', {
+      const response = await fetch('http://localhost:3001/api/requests/all', {
         credentials: 'include'
       });
       const data = await response.json();
-      setRequests(data);
+      
+      // Handle both array and object-with-keys responses
+      let requestsArray: EquipmentRequest[] = [];
+      if (Array.isArray(data)) {
+        requestsArray = data;
+      } else if (typeof data === 'object' && data !== null) {
+        // Handle the weird object-with-numeric-keys response
+        requestsArray = Object.values(data).map((item: any) => ({
+          ...item,
+          // Normalize status by removing spaces
+          status: typeof item.status === 'string' ? item.status.replace(/\s+/g, '') : item.status
+        }));
+      }
+      
+      setRequests(requestsArray);
     } catch (error) {
       console.error('Failed to fetch requests:', error);
     } finally {
@@ -78,49 +80,74 @@ const AdminRequests = () => {
     fetchRequests();
   }, []);
 
-const handleApprove = async (requestId: string) => {
-  setActionLoading(true);
-  try {
-    const response = await fetch(`http://localhost:3001/api/requests/${requestId}/approve`, {
-      method: 'PUT',
-      credentials: 'include'
-    });
+  // Normalize status for display
+  const getDisplayStatus = (status: string) => {
+    const statusMap: Record<string, string> = {
+      'Pending': 'Pending',
+      'Approved': 'Approved',
+      'Denied': 'Denied',
+      'CheckedOut': 'Checked Out',
+      'Checked Out': 'Checked Out',
+      'Returned': 'Returned'
+    };
+    return statusMap[status] || status;
+  };
 
-    if (!response.ok) {
-      throw new Error(`Failed to approve request: ${response.status}`);
+  const getStatusColor = (status: string) => {
+    const normalized = status.replace(/\s+/g, '');
+    const colors: Record<string, string> = {
+      'Pending': '#ff9800',
+      'Approved': '#4caf50',
+      'Denied': '#f44336',
+      'CheckedOut': '#1976d2',
+      'Returned': '#9c27b0'
+    };
+    return colors[normalized] || '#999';
+  };
+
+  const handleApprove = async (requestId: string) => {
+    setActionLoading(true);
+    try {
+      const response = await fetch(`http://localhost:3001/api/requests/${requestId}/approve`, {
+        method: 'PUT',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to approve request: ${response.status}`);
+      }
+
+      await fetchRequests();
+      setDetailsOpen(false);
+    } catch (error) {
+      console.error('Failed to approve request:', error);
+      alert('Failed to approve request. Please try again.');
+    } finally {
+      setActionLoading(false);
     }
+  };
 
-    await fetchRequests();
-    setDetailsOpen(false);
-  } catch (error) {
-    console.error('Failed to approve request:', error);
-    alert('Failed to approve request. Please try again.');
-  } finally {
-    setActionLoading(false);
-  }
-};
+  const handleDeny = async (requestId: string) => {
+    setActionLoading(true);
+    try {
+      const response = await fetch(`http://localhost:3001/api/requests/${requestId}/reject`, {
+        method: 'PUT',
+        credentials: 'include'  
+      });
 
-const handleDeny = async (requestId: string) => {
-  setActionLoading(true);
-  try {
-    const response = await fetch(`http://localhost:3001/api/requests/${requestId}/reject`, {
-      method: 'PUT',
-      credentials: 'include'  
-    });
+      if (!response.ok) {
+        throw new Error(`Failed to reject request: ${response.status}`);
+      }
 
-    if (!response.ok) {
-      throw new Error(`Failed to reject request: ${response.status}`);
+      await fetchRequests();
+      setDetailsOpen(false);
+    } catch (error) {
+      console.error('Failed to reject request:', error);
+      alert('Failed to reject request. Please try again.');
+    } finally {
+      setActionLoading(false);
     }
-
-    await fetchRequests();
-    setDetailsOpen(false);
-  } catch (error) {
-    console.error('Failed to reject request:', error);
-    alert('Failed to reject request. Please try again.');
-  } finally {
-    setActionLoading(false);
-  }
-};
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -132,35 +159,30 @@ const handleDeny = async (requestId: string) => {
     });
   };
 
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      'Pending': '#ff9800',
-      'Approved': '#4caf50',
-      'Denied': '#f44336',
-      'Checked Out': '#1976d2',
-      'Returned': '#9c27b0'
-    };
-    return colors[status] || '#999';
-  };
-
+  // Filter and search
   const filteredRequests = requests.filter(req => {
     const matchesSearch = searchTerm === '' || 
-      req.userFullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      req.equipmentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      req.equipmentSerialNumber.toLowerCase().includes(searchTerm.toLowerCase());
+      req.userFullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      req.equipmentName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      req.equipmentSerialNumber?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = statusFilter === 'all' || req.status === statusFilter;
+    const normalizedReqStatus = req.status?.replace(/\s+/g, '') || '';
+    const normalizedFilterStatus = statusFilter.replace(/\s+/g, '');
+    
+    const matchesStatus = statusFilter === 'all' || normalizedReqStatus === normalizedFilterStatus;
     
     return matchesSearch && matchesStatus;
   });
 
-  if (authLoading) {
+  const statusButtons = ['all', 'Pending', 'Approved', 'CheckedOut', 'Returned', 'Denied'];
+
+  if (authLoading || loading) {
     return (
       <>
         <Topbar isAdmin={true} onMenuClick={() => setSidebarOpen(true)} />
         <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <div className={styles.loadingContainer}>
-          <div>Verifying access...</div>
+          <div>Loading requests...</div>
         </div>
       </>
     );
@@ -193,22 +215,22 @@ const handleDeny = async (requestId: string) => {
                 borderColor: getStatusColor(status)
               } : {}}
             >
-              {status === 'all' ? 'All Requests' : status}
+              {status === 'all' ? 'All Requests' : getDisplayStatus(status)}
             </Button>
           ))}
           <Button
             variant="contained"
             startIcon={<Icon>add</Icon>}
             onClick={() => setRequestModalOpen(true)}
-            >
+          >
             New Request
-            </Button>
+          </Button>
 
-            <RequestModal
+          <RequestModal
             open={requestModalOpen}
             onClose={() => setRequestModalOpen(false)}
-            onRequestSubmitted={fetchRequests} // Refresh the list
-            />
+            onRequestSubmitted={fetchRequests}
+          />
         </div>
 
         {/* Search Bar */}
@@ -258,7 +280,7 @@ const handleDeny = async (requestId: string) => {
                     <td>
                       <div className={styles.userCell}>
                         <Avatar className={styles.userAvatar}>
-                          {request.userFullName.charAt(0)}
+                          {request.userFullName?.charAt(0) || '?'}
                         </Avatar>
                         <span>{request.userFullName}</span>
                       </div>
@@ -282,9 +304,8 @@ const handleDeny = async (requestId: string) => {
                       </div>
                     </td>
                     <td>
-                        
                       <Chip
-                        label={request.status}
+                        label={getDisplayStatus(request.status)}
                         size="small"
                         className={styles.statusChip}
                         style={{
@@ -327,7 +348,7 @@ const handleDeny = async (requestId: string) => {
           {statusFilter !== 'all' && (
             <Chip
               size="small"
-              label={`Filter: ${statusFilter}`}
+              label={`Filter: ${getDisplayStatus(statusFilter)}`}
               onDelete={() => setStatusFilter('all')}
               className={styles.filterChip}
             />
@@ -350,7 +371,7 @@ const handleDeny = async (requestId: string) => {
                 Request Details
               </div>
               <Chip
-                label={selectedRequest.status}
+                label={getDisplayStatus(selectedRequest.status)}
                 size="small"
                 style={{
                   backgroundColor: `${getStatusColor(selectedRequest.status)}20`,
@@ -412,26 +433,26 @@ const handleDeny = async (requestId: string) => {
               <Button onClick={() => setDetailsOpen(false)} disabled={actionLoading}>
                 Close
               </Button>
-              {selectedRequest.status === 'Pending' && (
+              {selectedRequest.status.replace(/\s+/g, '') === 'Pending' && (
                 <>
-                    <Button
+                  <Button
                     onClick={() => handleDeny(selectedRequest.id)}
                     color="error"
                     variant="outlined"
                     disabled={actionLoading}
-                    >
+                  >
                     Reject
-                    </Button>
-                    <Button
+                  </Button>
+                  <Button
                     onClick={() => handleApprove(selectedRequest.id)}
                     color="success"
                     variant="contained"
                     disabled={actionLoading}
-                    >
+                  >
                     Approve
-                    </Button>
+                  </Button>
                 </>
-                )}
+              )}
             </DialogActions>
           </>
         )}
