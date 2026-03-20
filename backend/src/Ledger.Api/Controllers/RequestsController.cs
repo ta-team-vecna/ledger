@@ -189,6 +189,7 @@ public sealed class RequestsController : ControllerBase {
     /// <response code="401">If the user is not authenticated.</response>
     /// <response code="403">If the user is not an admin.</response>
     [HttpPut("{id:guid}/approve")]
+    [Authorize(Policy = "StrictAdmin")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
