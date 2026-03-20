@@ -13,8 +13,15 @@ import Checkbox from '@mui/material/Checkbox';
 import Select from '@mui/material/Select';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
-import styles from './AdminInventory.module.css'; 
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import CircularProgress from '@mui/material/CircularProgress';
+import styles from './AdminInventory.module.css';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
+import { apiFetch } from '../../src/utils/apiFetch';
+import AddItemModal from '../../components/Admin/addItemModal';
 
 interface Equipment {
   id: string;
@@ -27,13 +34,6 @@ interface Equipment {
   photoUrl?: string;
   requiresAdminApproval: boolean;
 }
-import { apiFetch } from '../../src/utils/apiFetch';
-import AddItemModal from '../../components/Admin/addItemModal';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
-import CircularProgress from '@mui/material/CircularProgress';
 
 const AdminInventory = () => {
     const { loading: authLoading } = useAdminGuard();
@@ -58,44 +58,6 @@ const AdminInventory = () => {
     setSelectedItems([...selectedItems, id]);
   }
   };
-
-  const verifyAdmin = async () => {
-  try {
-    const token = localStorage.getItem('token');
-    
-    // Get current user ID
-    const meResponse = await fetch('http://localhost:3001/api/auth/me', {
-      credentials: 'include'
-    });
-    
-    if (!meResponse.ok) {
-      throw new Error('Not authenticated');
-    }
-    
-    const me = await meResponse.json();
-    
-    // Verify actual role from truth source
-    const usersResponse = await fetch('http://localhost:3001/api/users', {
-      credentials: 'include',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    
-    if (!usersResponse.ok) {
-      throw new Error('Failed to verify permissions');
-    }
-    
-    const users = await usersResponse.json();
-    const currentUser = users.find((u: any) => u.id === me.userId);
-    
-    if (!currentUser || currentUser.role !== 'Admin') {
-      throw new Error('Admin privileges required');
-    }
-    
-    return true;
-  } catch (error) {
-    throw new Error(error instanceof Error ? error.message : 'Authentication failed');
-  }
-};
 
   const formatStatus = (status: string) => {
   const statusMap: Record<string, string> = {
@@ -150,27 +112,6 @@ const AdminInventory = () => {
   // Get unique categories for filter
 
   useEffect(() => {
-  const fetchEquipment = async () => {
-    try {
-      const response = await apiFetch('http://localhost:3001/api/equipment', {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      setEquipment(data);
-    } catch (error) {
-      console.error('Failed to fetch:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
   fetchEquipment();
 }, []);
 

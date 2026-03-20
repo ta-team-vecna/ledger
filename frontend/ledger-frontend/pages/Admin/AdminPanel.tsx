@@ -17,28 +17,17 @@ import { useAdminGuard } from '../../hooks/useAdminGuard';
 const API_BASE = "http://localhost:3001";
 
 const AdminPanel = () => {
-
-const fetchUsers = async () => {
-    try {
-      const response = await fetch('http://localhost:3001/api/users', {
-        credentials: 'include'
-      });
-      const data = await response.json();
-      setUsers(data);
-    } catch (error) {
-      console.error('Failed to fetch users:', error);
-    }
-  };
-
-
-useEffect(() => {fetchUsers()}, []);
-
     const { loading: authLoading } = useAdminGuard();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [totalItems, setTotalItems] = useState<number | null>(null);
-  var [users, setUsers] = useState<any[]>([])
+  const [users, setUsers] = useState<Record<string, unknown>[]>([])
 
   useEffect(() => {
+    apiFetch(`${API_BASE}/api/users`)
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => setUsers(data))
+      .catch(() => console.error('Failed to fetch users'));
+
     apiFetch(`${API_BASE}/api/equipment`)
       .then(res => res.ok ? res.json() : Promise.reject())
       .then((data: unknown[]) => setTotalItems(data.length))
