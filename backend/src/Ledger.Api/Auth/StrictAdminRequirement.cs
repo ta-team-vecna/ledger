@@ -33,6 +33,7 @@ public sealed class StrictAdminHandler : AuthorizationHandler<StrictAdminRequire
 
         if (userRole == UserRole.Admin) {
             context.Succeed(requirement);
+            return;
         }
 
         context.Fail();
