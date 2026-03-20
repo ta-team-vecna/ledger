@@ -109,7 +109,7 @@ const AdminUsers = () => {
   if (authLoading) {
     return (
       <>
-        <Topbar isAdmin={true} onMenuClick={() => setSidebarOpen(true)} />
+        <Topbar onMenuClick={() => setSidebarOpen(true)} />
         <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <div className={styles.loadingContainer}>
           <div>Verifying access...</div>
@@ -224,7 +224,7 @@ const AdminUsers = () => {
   if (loading) {
     return (
       <>
-        <Topbar isAdmin={true} onMenuClick={() => setSidebarOpen(true)} />
+        <Topbar onMenuClick={() => setSidebarOpen(true)} />
         <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <div className={styles.loadingContainer}>
           <div>Loading users...</div>
@@ -302,7 +302,7 @@ const AdminUsers = () => {
 
   return (
     <>
-      <Topbar isAdmin={true} onMenuClick={() => setSidebarOpen(true)} />
+      <Topbar onMenuClick={() => setSidebarOpen(true)} />
       <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className={styles.usersContainer} style={{ 

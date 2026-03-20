@@ -20,6 +20,7 @@ import {
   ToggleButtonGroup
 } from '@mui/material';
 import Icon from '@mui/material/Icon';
+import type { SelectChangeEvent } from '@mui/material/Select';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -41,7 +42,7 @@ interface RequestModalProps {
   userId?: string;
 }
 
-const RequestModal = ({ open, onClose, onRequestSubmitted, userId }: RequestModalProps) => {
+const RequestModal = ({ open, onClose, onRequestSubmitted }: RequestModalProps) => {
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [filteredEquipment, setFilteredEquipment] = useState<Equipment[]>([]);
   const [filterMode, setFilterMode] = useState<'all' | 'open'>('all');
@@ -162,7 +163,7 @@ const RequestModal = ({ open, onClose, onRequestSubmitted, userId }: RequestModa
     }
   };
 
-  const handleEquipmentChange = (e: any) => {
+  const handleEquipmentChange = (e: SelectChangeEvent<string>) => {
     setFormData(prev => ({ ...prev, equipmentId: e.target.value }));
     if (fieldErrors.equipmentId) {
       setFieldErrors(prev => ({ ...prev, equipmentId: '' }));

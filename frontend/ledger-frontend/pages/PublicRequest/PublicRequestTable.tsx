@@ -3,8 +3,6 @@ import Topbar from "../../components/topBar/topBar";
 import AdminSidebar from "../../components/adminSideBar/adminSideBar";
 import Icon from '@mui/material/Icon';
 import Button from '@mui/material/Button';
-import TextField from '@mui/material/TextField';
-import InputAdornment from '@mui/material/InputAdornment';
 import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -80,6 +78,7 @@ const RequestsTable = () => {
       setDetailsOpen(false);
       setReturnNotes('');
     } catch (error) {
+      console.error('Failed to return item:', error);
       alert('Failed to return item');
     } finally {
       setActionLoading(false);

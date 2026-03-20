@@ -91,19 +91,6 @@ const AdminInventory = () => {
     }
   };
 
-  const formatStatus = (status: string) => {
-  const statusMap: Record<string, string> = {
-    'CheckedOut': 'Checked Out',
-    'UnderRepair': 'Under Repair',
-    'Available': 'Available',
-    'Reserved': 'Reserved',
-    'Retired': 'Retired',
-    'Overdue': 'Overdue',
-    'Unavailable': 'Unavailable'
-  };
-  return statusMap[status] || status;
-};
-
 // Status display configuration
 const STATUS_CONFIG: Record<string, { color: string; icon: string; label: string }> = {
   'Available': { color: '#4caf50', icon: 'check_circle', label: 'Available' },

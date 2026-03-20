@@ -36,7 +36,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const me = await res.json();
 
-      const userRes = await apiFetch(`${API_BASE}/api/auth/me`);
+      // Fetch fresh role from database via /users endpoint
+      const userRes = await apiFetch(`${API_BASE}/api/users/${me.userId}`);
       const role = userRes.ok ? (await userRes.json()).role : me.role;
 
       setUser({ ...me, role });

@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import Topbar from "../../components/topBar/topBar";
 import AdminSidebar from '../../components/adminSideBar/adminSideBar';
 import { apiFetch } from '../../src/utils/apiFetch';
@@ -15,17 +15,6 @@ import { useAdminGuard } from '../../hooks/useAdminGuard';
 
 const API_BASE = "http://localhost:3001";
 
-// Define types for better TypeScript support
-interface User {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  role: string;
-  createdAtUtc: string;
-}
-
-
 interface TransformedRequest {
     id: string; 
   user: string;
@@ -38,13 +27,23 @@ interface TransformedRequest {
   urgent: boolean;
 }
 
+interface RecentRequestApi {
+  id: string;
+  userFullName: string;
+  userRole?: string;
+  equipmentName: string;
+  requestedFromUtc: string;
+  requestedToUtc: string;
+  requestedAtUtc: string;
+  status: string;
+}
+
 const AdminPanel = () => {
     const { loading: authLoading } = useAdminGuard();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [totalItems, setTotalItems] = useState<number | null>(null);
   const [users, setUsers] = useState<Record<string, unknown>[]>([])
    const [recentRequests, setRecentRequests] = useState<TransformedRequest[]>([]);
-  const [recentLoading, setRecentLoading] = useState(true);
   const [requestFilter, setRequestFilter] = useState('all');
   const [requestLimit, setRequestLimit] = useState(10);
   const [actionFilter, setActionFilter] = useState('all');
@@ -63,16 +62,14 @@ const AdminPanel = () => {
   }, []);
 
   // Fetch recent requests
- const fetchRecentRequests = async () => {
+ const fetchRecentRequests = useCallback(async () => {
   try {
-    const response = await fetch('http://localhost:3001/api/requests/all', {
-      credentials: 'include'
-    });
+    const response = await apiFetch(`${API_BASE}/api/requests/all`);
+    if (!response.ok) return;
     const data = await response.json();
-    console.log('Raw request data:', data);
-    
-    const transformed = (Array.isArray(data) ? data : Object.values(data)).map((req: any) => ({
-      id: req.id, // Make sure this exists in the API response
+
+    const transformed = (Array.isArray(data) ? data : Object.values(data)).map((req: RecentRequestApi) => ({
+      id: req.id,
       user: req.userFullName,
       role: req.userRole || 'User',
       item: req.equipmentName,
@@ -82,19 +79,16 @@ const AdminPanel = () => {
       status: req.status.toLowerCase(),
       urgent: isUrgent(req)
     }));
-    
-    console.log('Transformed requests:', transformed);
+
     setRecentRequests(transformed);
   } catch (error) {
     console.error('Failed to fetch recent requests:', error);
-  } finally {
-    setRecentLoading(false);
   }
-};
+}, []);
 
   useEffect(() => {
     fetchRecentRequests();
-  }, []);
+  }, [fetchRecentRequests]);
 
   // Helper functions
   const getDurationString = (from: string, to: string) => {
@@ -109,7 +103,7 @@ const AdminPanel = () => {
     return `${Math.floor(minutes / 1440)} day${Math.floor(minutes / 1440) !== 1 ? 's' : ''} ago`;
   };
 
-  const isUrgent = (req: any) => {
+  const isUrgent = (req: RecentRequestApi) => {
     if (req.status !== 'Pending') return false;
     const hours = (new Date().getTime() - new Date(req.requestedAtUtc).getTime()) / (1000 * 60 * 60);
     return hours > 48;
@@ -122,14 +116,10 @@ const AdminPanel = () => {
 
 const handleApproveRequest = async (requestId: string) => {
   try {
-    const response = await fetch(`http://localhost:3001/api/requests/${requestId}/approve`, {
+    const response = await apiFetch(`${API_BASE}/api/requests/${requestId}/approve`, {
       method: 'PUT',
-      credentials: 'include'
     });
-    
     if (!response.ok) throw new Error('Failed to approve request');
-    
-    // Refresh the requests list
     await fetchRecentRequests();
   } catch (error) {
     console.error('Failed to approve request:', error);
@@ -139,14 +129,10 @@ const handleApproveRequest = async (requestId: string) => {
 
 const handleRejectRequest = async (requestId: string) => {
   try {
-    const response = await fetch(`http://localhost:3001/api/requests/${requestId}/reject`, {
+    const response = await apiFetch(`${API_BASE}/api/requests/${requestId}/reject`, {
       method: 'PUT',
-      credentials: 'include'
     });
-    
     if (!response.ok) throw new Error('Failed to reject request');
-    
-    // Refresh the requests list
     await fetchRecentRequests();
   } catch (error) {
     console.error('Failed to reject request:', error);
