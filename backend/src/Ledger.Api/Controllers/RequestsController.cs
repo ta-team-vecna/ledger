@@ -120,7 +120,7 @@ public sealed class RequestsController : ControllerBase {
     }
 
     /// <summary>
-    /// Creates a new request to borrow equipment.
+    /// Creates a new request to borrow equipment. If the equipment doesn't require admin approval, the request is marked as approved automatically.
     /// </summary>
     /// <param name="request">The details of the equipment request.</param>
     /// <returns>The newly created equipment request.</returns>
@@ -155,11 +155,12 @@ public sealed class RequestsController : ControllerBase {
             return Conflict(ApiErrors.Conflict("Equipment is not currently available."));
         }
 
+        var initialStatus = equipment.RequiresAdminApproval ? RequestStatus.Pending : RequestStatus.Approved;
         var entity = new EquipmentRequest {
             Id = Guid.NewGuid(),
             UserId = userId,
             EquipmentId = equipment.Id,
-            Status = RequestStatus.Pending,
+            Status = initialStatus,
             RequestedAtUtc = DateTime.UtcNow,
             RequestedFromUtc = request.RequestedFromUtc,
             RequestedToUtc = request.RequestedToUtc
