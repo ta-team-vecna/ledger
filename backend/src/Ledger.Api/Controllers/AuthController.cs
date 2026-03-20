@@ -41,8 +41,17 @@ public sealed class AuthController : ControllerBase {
         Response.Cookies.Append("refreshToken", refreshToken, cookieOptions);
     }
 
+    /// <summary>
+    /// Registers a new user in the system.
+    /// </summary>
+    /// <param name="request">The user's registration details.</param>
+    /// <returns>The registered user's authentication details and tokens.</returns>
+    /// <response code="200">Returns the newly registered user's details and sets HTTP-only cookies.</response>
+    /// <response code="409">If a user with the provided email already exists.</response>
     [HttpPost("register")]
     [AllowAnonymous]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<AuthResponse>> Register(RegisterRequest request) {
         var email = request.Email.Trim().ToLowerInvariant();
         var exists = await _db.Users.AnyAsync(x => x.Email == email);
@@ -85,8 +94,17 @@ public sealed class AuthController : ControllerBase {
         ));
     }
 
+    /// <summary>
+    /// Authenticates a user and issues JWT and refresh tokens.
+    /// </summary>
+    /// <param name="request">The user's login credentials.</param>
+    /// <returns>The authenticated user's details and tokens.</returns>
+    /// <response code="200">Returns the user's details and sets HTTP-only cookies for tokens.</response>
+    /// <response code="401">If the email or password is incorrect.</response>
     [HttpPost("login")]
     [AllowAnonymous]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<AuthResponse>> Login(LoginRequest request) {
         var email = request.Email.Trim().ToLowerInvariant();
 
@@ -127,8 +145,14 @@ public sealed class AuthController : ControllerBase {
         ));
     }
 
+    /// <summary>
+    /// Logs out the current user by clearing their token cookies and invalidating the refresh token in the database.
+    /// </summary>
+    /// <returns>An empty success response.</returns>
+    /// <response code="200">Successfully logged out.</response>
     [HttpPost("logout")]
     [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> Logout() {
         Response.Cookies.Delete("token");
         Response.Cookies.Delete("refreshToken");
@@ -146,8 +170,19 @@ public sealed class AuthController : ControllerBase {
         return Ok();
     }
 
+    /// <summary>
+    /// Refreshes the user's access token using their valid refresh token.
+    /// </summary>
+    /// <remarks>
+    /// This endpoint expects the access and refresh tokens to be present in the HTTP-only cookies.
+    /// </remarks>
+    /// <returns>An empty success response, with newly issued token cookies.</returns>
+    /// <response code="200">Successfully refreshed tokens.</response>
+    /// <response code="400">If the tokens are missing, invalid, or expired.</response>
     [HttpPost("refresh")]
     [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Refresh() {
         var accessOk = Request.Cookies.TryGetValue("token", out var accessToken);
         var refreshOk = Request.Cookies.TryGetValue("refreshToken", out var refreshToken);
@@ -196,8 +231,16 @@ public sealed class AuthController : ControllerBase {
         return Ok();
     }
 
+    /// <summary>
+    /// Retrieves the profile information of the currently authenticated user.
+    /// </summary>
+    /// <returns>The current user's profile details.</returns>
+    /// <response code="200">Returns the user's profile information.</response>
+    /// <response code="401">If the user is not authenticated.</response>
     [HttpGet("me")]
     [Authorize]
+    [ProducesResponseType(typeof(CurrentUserResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public ActionResult<CurrentUserResponse> Me() {
         var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
         var email = User.FindFirst(ClaimTypes.Email)!.Value;
