@@ -11,6 +11,7 @@ import DialogActions from '@mui/material/DialogActions';
 import TextareaAutosize from '@mui/material/TextareaAutosize';
 import styles from "./PublicRequestTable.module.css";
 import { useAuth } from "../../src/context/useAuth";
+import { apiFetch, API_BASE } from '../../src/utils/apiFetch';
 
 interface Request {
   id: string;
@@ -40,9 +41,7 @@ const RequestsTable = () => {
   // Fetch user's requests directly from the API
   const fetchRequests = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/requests/me', { 
-        credentials: 'include' 
-      });
+      const res = await apiFetch(`${API_BASE}/api/requests/me`);
       const data = await res.json();
       setRequests(Array.isArray(data) ? data : []);
     } catch (error) {
@@ -62,15 +61,11 @@ const RequestsTable = () => {
     if (!selectedRequest) return;
     setActionLoading(true);
     try {
-      const res = await fetch(
-        `http://localhost:3001/api/requests/${selectedRequest.id}/return`,
-        {
-          method: 'PUT',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ returnConditionNotes: returnNotes })
-        }
-      );
+      const res = await apiFetch(`${API_BASE}/api/requests/${selectedRequest.id}/return`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ returnConditionNotes: returnNotes })
+      });
       if (!res.ok) throw new Error('Return failed');
       
       await fetchRequests();

@@ -9,6 +9,7 @@ import Alert from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
 import styles from './topBar.module.css';
 import { useAuth } from '../../src/context/useAuth'; 
+import { apiFetch, API_BASE } from '../../src/utils/apiFetch';
 
 interface TopbarProps {
   onMenuClick?: () => void;
@@ -33,9 +34,8 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
 
   const handleLogout = async () => {
     try {
-      await fetch('http://localhost:3001/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include'
+      await apiFetch(`${API_BASE}/api/auth/logout`, {
+        method: 'POST'
       });
       
       localStorage.clear();

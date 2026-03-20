@@ -1,5 +1,5 @@
 import { useState, type ChangeEvent } from 'react';
-import { apiFetch } from '../../src/utils/apiFetch';
+import { apiFetch, API_BASE } from '../../src/utils/apiFetch';
 import {
   Dialog,
   DialogTitle,
@@ -94,7 +94,7 @@ const AddUserModal = ({ open, onClose, onUserAdded }: AddUserModalProps) => {
     setError(null);
 
     try {
-      const response = await apiFetch('http://localhost:3001/api/users', {
+      const response = await apiFetch(`${API_BASE}/api/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

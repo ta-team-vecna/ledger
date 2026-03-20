@@ -19,7 +19,7 @@ import DialogActions from '@mui/material/DialogActions';
 import CircularProgress from '@mui/material/CircularProgress';
 import styles from './AdminInventory.module.css';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
-import { apiFetch } from '../../src/utils/apiFetch';
+import { apiFetch, API_BASE } from '../../src/utils/apiFetch';
 import Tooltip from '@mui/material/Tooltip'; 
 import AddItemModal from '../../components/Admin/addItemModal';
 
@@ -75,8 +75,8 @@ const AdminInventory = () => {
     setLoading(true);
     try {
       const [equipRes, reqRes] = await Promise.all([
-        apiFetch('http://localhost:3001/api/equipment'),
-        apiFetch('http://localhost:3001/api/requests/all')
+        apiFetch(`${API_BASE}/api/equipment`),
+        apiFetch(`${API_BASE}/api/requests/all`)
       ]);
       
       const equipData = await equipRes.json();
@@ -257,7 +257,7 @@ const getDisplayStatus = (item: Equipment): string => {
     if (statusNumber === undefined) return;
 
     try {
-      const response = await apiFetch(`http://localhost:3001/api/equipment/${activeItem}/status`, {
+      const response = await apiFetch(`${API_BASE}/api/equipment/${activeItem}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: statusNumber })
@@ -281,7 +281,7 @@ const getDisplayStatus = (item: Equipment): string => {
     setDeleting(true);
     try {
       const deletePromises = selectedItems.map(id =>
-        apiFetch(`http://localhost:3001/api/equipment/${id}`, { method: 'DELETE' })
+        apiFetch(`${API_BASE}/api/equipment/${id}`, { method: 'DELETE' })
       );
       
       const results = await Promise.all(deletePromises);

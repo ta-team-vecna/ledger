@@ -25,6 +25,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import styles from "./RequestModal.module.css";
+import { apiFetch, API_BASE } from '../../src/utils/apiFetch';
 
 interface Equipment {
   id: string;
@@ -64,9 +65,7 @@ const RequestModal = ({ open, onClose, onRequestSubmitted }: RequestModalProps) 
       
       setLoading(true);
       try {
-        const response = await fetch('http://localhost:3001/api/equipment', {
-          credentials: 'include'
-        });
+        const response = await apiFetch(`${API_BASE}/api/equipment`);
         
         if (!response.ok) throw new Error('Failed to fetch equipment');
         
@@ -179,18 +178,14 @@ const RequestModal = ({ open, onClose, onRequestSubmitted }: RequestModalProps) 
   setError(null);
 
   try {
-    const token = localStorage.getItem('token');
-    
     // Get the selected equipment to check if it needs approval
     const selectedEquipment = equipment.find(e => e.id === formData.equipmentId);
     
     // Step 1: Create the request
-    const createResponse = await fetch('http://localhost:3001/api/requests', {
+    const createResponse = await apiFetch(`${API_BASE}/api/requests`, {
       method: 'POST',
-      credentials: 'include',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(formData)
     });
@@ -212,12 +207,8 @@ const RequestModal = ({ open, onClose, onRequestSubmitted }: RequestModalProps) 
     
     // Step 2: Auto-approve if the item doesn't require admin approval
     if (selectedEquipment && !selectedEquipment.requiresAdminApproval) {
-      const approveResponse = await fetch(`http://localhost:3001/api/requests/${requestId}/approve`, {
-        method: 'PUT',
-        credentials: 'include',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const approveResponse = await apiFetch(`${API_BASE}/api/requests/${requestId}/approve`, {
+        method: 'PUT'
       });
 
       if (!approveResponse.ok) {

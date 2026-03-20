@@ -2,16 +2,13 @@ import { useState, useEffect } from "react";
 import styles from "./Dashboard.module.css";
 import { Button } from "@mui/material";
 import Topbar from "../../components/topBar/topBar";
-import { apiFetch } from '../../src/utils/apiFetch';
+import { apiFetch, API_BASE } from '../../src/utils/apiFetch';
 import Icon from "@mui/material/Icon";
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import Divider from '@mui/material/Divider';
 import ListItemText from '@mui/material/ListItemText';
 import RequestModal from "../../components/modals/RequestModal"
-
-
-const API_BASE = "http://localhost:3001";
 
 function generateItems() {
   return [];

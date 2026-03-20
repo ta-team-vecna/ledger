@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import Topbar from "../../components/topBar/topBar";
 import AdminSidebar from '../../components/adminSideBar/adminSideBar';
-import { apiFetch } from '../../src/utils/apiFetch';
+import { apiFetch, API_BASE } from '../../src/utils/apiFetch';
 import { Divider } from '@mui/material';
 import Icon from '@mui/material/Icon';
 import styles from './AdminPanel.module.css';
@@ -12,8 +12,6 @@ import Chip from '@mui/material/Chip';
 import Avatar from '@mui/material/Avatar';
 import Tooltip from '@mui/material/Tooltip';
 import { useAdminGuard } from '../../hooks/useAdminGuard'; 
-
-const API_BASE = "http://localhost:3001";
 
 interface TransformedRequest {
     id: string; 

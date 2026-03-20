@@ -15,6 +15,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';    
 import Tooltip from '@mui/material/Tooltip';
 import RequestModal from "../../components/modals/RequestModal"
+import { apiFetch, API_BASE } from '../../src/utils/apiFetch';
 
 
 interface EquipmentRequest {
@@ -50,9 +51,7 @@ const AdminRequests = () => {
   // Fetch requests
   const fetchRequests = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/requests/all', {
-        credentials: 'include'
-      });
+      const response = await apiFetch(`${API_BASE}/api/requests/all`);
       const data = await response.json();
       
       // Handle both array and object-with-keys responses
@@ -86,9 +85,8 @@ const AdminRequests = () => {
   const handleApprove = async (requestId: string) => {
     setActionLoading(true);
     try {
-      const response = await fetch(`http://localhost:3001/api/requests/${requestId}/approve`, {
-        method: 'PUT',
-        credentials: 'include'
+      const response = await apiFetch(`${API_BASE}/api/requests/${requestId}/approve`, {
+        method: 'PUT'
       });
 
       if (!response.ok) throw new Error('Failed to approve request');
@@ -106,9 +104,8 @@ const AdminRequests = () => {
   const handleDeny = async (requestId: string) => {
     setActionLoading(true);
     try {
-      const response = await fetch(`http://localhost:3001/api/requests/${requestId}/reject`, {
-        method: 'PUT',
-        credentials: 'include'  
+      const response = await apiFetch(`${API_BASE}/api/requests/${requestId}/reject`, {
+        method: 'PUT'
       });
 
       if (!response.ok) throw new Error('Failed to reject request');
