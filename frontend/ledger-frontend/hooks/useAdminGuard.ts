@@ -1,65 +1,29 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../src/context/useAuth';
 
 export const useAdminGuard = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { user, isLoading } = useAuth();
 
   useEffect(() => {
-    // If not on an admin route, don't do anything
+    if (isLoading) return;
+
     if (!location.pathname.startsWith('/admin')) {
-      setLoading(false);
       return;
     }
 
-    const verifyAdmin = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        
-        // Get current user ID
-        const meResponse = await fetch('http://localhost:3001/api/auth/me', {
-          credentials: 'include'
-        });
-        
-        if (!meResponse.ok) {
-          navigate('/login');
-          return;
-        }
-        
-        const me = await meResponse.json();
-        
-        // Verify actual role from truth source
-        const usersResponse = await fetch('http://localhost:3001/api/users', {
-          credentials: 'include',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (!usersResponse.ok) {
-          navigate('/dashboard');
-          return;
-        }
-        
-        const users = await usersResponse.json();
-        const currentUser = users.find((u: any) => u.id === me.userId);
-        
-        if (!currentUser || currentUser.role !== 'Admin') {
-          navigate('/dashboard');
-          return;
-        }
-        
-        setIsAdmin(true);
-      } catch (error) {
-        console.error('Admin verification failed:', error);
-        navigate('/dashboard');
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (!user) {
+      navigate('/login');
+      return;
+    }
 
-    verifyAdmin();
-  }, [navigate, location.pathname]);
+    if (user.role !== 'Admin') {
+      navigate('/dashboard');
+      return;
+    }
+  }, [user, isLoading, navigate, location.pathname]);
 
-  return { isAdmin, loading };
+  return { isAdmin: user?.role === 'Admin', loading: isLoading };
 };
