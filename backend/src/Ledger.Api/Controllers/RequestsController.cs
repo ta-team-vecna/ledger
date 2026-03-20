@@ -2,6 +2,7 @@
 using System.Security.Claims;
 using Ledger.Api.Data;
 using Ledger.Api.Domain;
+using Ledger.Api.Dto;
 using Ledger.Api.Dto.Equipment;
 using Ledger.Api.Utilities;
 using Microsoft.AspNetCore.Authorization;
@@ -212,6 +213,17 @@ public sealed class RequestsController : ControllerBase {
             return BadRequest(ApiErrors.BadRequest("Invalid state", "Only pending requests can be approved."));
         }
 
+        if (request.Equipment.Status != EquipmentStatus.Available) {
+            return Conflict(ApiErrors.Conflict("Equipment is not currently available."));
+        }
+
+        var adminIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (adminIdClaim is null) {
+            return Unauthorized(ApiErrors.Unauthorized);
+        }
+
+        request.ReviewedByAdminId = Guid.Parse(adminIdClaim);
+        request.ReviewedAtUtc = DateTime.UtcNow;
         request.Status = RequestStatus.Approved;
         request.Equipment.Status = EquipmentStatus.Reserved;
         await _db.SaveChangesAsync();
@@ -236,7 +248,7 @@ public sealed class RequestsController : ControllerBase {
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<ActionResult> Reject(Guid id) {
+    public async Task<ActionResult> Reject(Guid id, [FromBody] ReviewRequest? payload) {
         var request = await _db.EquipmentRequests
             .FirstOrDefaultAsync(x => x.Id == id);
 
@@ -248,7 +260,16 @@ public sealed class RequestsController : ControllerBase {
             return BadRequest(ApiErrors.BadRequest("Invalid state", "Only pending requests can be rejected."));
         }
 
+        var adminIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (adminIdClaim is null) {
+            return Unauthorized(ApiErrors.Unauthorized);
+        }
+
+        request.ReviewedByAdminId = Guid.Parse(adminIdClaim);
+        request.ReviewedAtUtc = DateTime.UtcNow;
         request.Status = RequestStatus.Rejected;
+        request.AdminComment = payload?.Comment;
+
         await _db.SaveChangesAsync();
 
         return NoContent();
@@ -296,7 +317,7 @@ public sealed class RequestsController : ControllerBase {
 
         return NoContent();
     }
-    
+
     /// <summary>
     /// Allows checking out equipment from a request.
     /// </summary>
