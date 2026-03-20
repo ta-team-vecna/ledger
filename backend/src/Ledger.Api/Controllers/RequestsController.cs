@@ -187,6 +187,7 @@ public sealed class RequestsController : ControllerBase {
     /// Approves a pending equipment request and marks the equipment as reserved.
     /// </summary>
     /// <param name="id">The unique identifier of the request to approve.</param>
+    /// <param name="payload">The details of the rejection.</param>
     /// <returns>An empty success response.</returns>
     /// <response code="204">Successfully approved the request.</response>
     /// <response code="400">If the request is not in a pending state.</response>
@@ -200,7 +201,7 @@ public sealed class RequestsController : ControllerBase {
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<ActionResult> Approve(Guid id) {
+    public async Task<ActionResult> Approve(Guid id, [FromBody] ReviewRequest? payload) {
         var request = await _db.EquipmentRequests
             .Include(r => r.Equipment)
             .FirstOrDefaultAsync(x => x.Id == id);
@@ -225,7 +226,7 @@ public sealed class RequestsController : ControllerBase {
         request.ReviewedByAdminId = Guid.Parse(adminIdClaim);
         request.ReviewedAtUtc = DateTime.UtcNow;
         request.Status = RequestStatus.Approved;
-        request.Equipment.Status = EquipmentStatus.Reserved;
+        request.AdminComment = payload?.Comment;
         await _db.SaveChangesAsync();
 
         return NoContent();
@@ -235,6 +236,7 @@ public sealed class RequestsController : ControllerBase {
     /// Rejects a pending equipment request.
     /// </summary>
     /// <param name="id">The unique identifier of the request to reject.</param>
+    /// <param name="payload">The details of the rejection.</param>
     /// <returns>An empty success response.</returns>
     /// <response code="204">Successfully rejected the request.</response>
     /// <response code="400">If the request is not in a pending state.</response>
@@ -319,7 +321,7 @@ public sealed class RequestsController : ControllerBase {
     }
 
     /// <summary>
-    /// Allows checking out equipment from a request.
+    /// Checks out the equipment from a request, marking it that it is in someone's hands now.
     /// </summary>
     /// <param name="id">The unique identifier of the equipment request.</param>
     /// <returns>An empty success response.</returns>
