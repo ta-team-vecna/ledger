@@ -187,7 +187,7 @@ public sealed class RequestsController : ControllerBase {
     /// <response code="400">If the request is not in a pending state.</response>
     /// <response code="404">If the request could not be found.</response>
     /// <response code="401">If the user is not authenticated.</response>
-    /// <response code="403">If equipment requires admin approval.</response>
+    /// <response code="403">If the user is not an admin.</response>
     [HttpPut("{id:guid}/approve")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
@@ -205,10 +205,6 @@ public sealed class RequestsController : ControllerBase {
 
         if (request.Status != RequestStatus.Pending) {
             return BadRequest(ApiErrors.BadRequest("Invalid state", "Only pending requests can be approved."));
-        }
-
-        if (request.Equipment.RequiresAdminApproval && !User.IsInRole("Admin")) {
-            return Unauthorized(ApiErrors.Unauthorized);
         }
 
         request.Status = RequestStatus.Approved;
