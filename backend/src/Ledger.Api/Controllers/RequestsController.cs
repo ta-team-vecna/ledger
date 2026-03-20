@@ -226,7 +226,9 @@ public sealed class RequestsController : ControllerBase {
         request.ReviewedByAdminId = Guid.Parse(adminIdClaim);
         request.ReviewedAtUtc = DateTime.UtcNow;
         request.Status = RequestStatus.Approved;
+        request.Equipment.Status = EquipmentStatus.Reserved;
         request.AdminComment = payload?.Comment;
+
         await _db.SaveChangesAsync();
 
         return NoContent();
@@ -308,10 +310,10 @@ public sealed class RequestsController : ControllerBase {
             return BadRequest(ApiErrors.BadRequest("Invalid state", "Only checked out equipment can be returned."));
         }
 
-        request.Status = RequestStatus.Returned;
         request.ReturnedAtUtc = DateTime.UtcNow;
         request.ReturnConditionNotes = payload.ReturnConditionNotes;
-        request.Equipment.Status = EquipmentStatus.Available;
+        request.Status = RequestStatus.Returned;
+        request.Equipment.Status = payload.WantsRepair ? EquipmentStatus.UnderRepair : EquipmentStatus.Available;
 
         // I: if time, query a free ai to check if notes indicate damage and mark for repair xD
 
@@ -350,7 +352,12 @@ public sealed class RequestsController : ControllerBase {
             return BadRequest(ApiErrors.BadRequest("Invalid state", "Only approved requests can be checked out."));
         }
 
+        if (request.Equipment.Status != EquipmentStatus.Reserved) {
+            return Conflict(ApiErrors.Conflict("Equipment is not currently reserved for checkout."));
+        }
+
         request.Status = RequestStatus.CheckedOut;
+        request.Equipment.Status = EquipmentStatus.CheckedOut;
         request.CheckedOutAtUtc = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();

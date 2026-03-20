@@ -1,3 +1,3 @@
 ﻿namespace Ledger.Api.Dto.Equipment;
 
-public record ReturnEquipmentRequest(string? ReturnConditionNotes);
+public record ReturnEquipmentRequest(string? ReturnConditionNotes, bool WantsRepair);
