@@ -163,8 +163,12 @@ public sealed class RequestsController : ControllerBase {
             Status = initialStatus,
             RequestedAtUtc = DateTime.UtcNow,
             RequestedFromUtc = request.RequestedFromUtc,
-            RequestedToUtc = request.RequestedToUtc
+            RequestedToUtc = request.RequestedToUtc,
         };
+
+        if (initialStatus == RequestStatus.Approved) {
+            equipment.Status = EquipmentStatus.Reserved;
+        }
 
         _db.EquipmentRequests.Add(entity);
         await _db.SaveChangesAsync();
