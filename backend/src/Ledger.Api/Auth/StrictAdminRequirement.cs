@@ -35,6 +35,6 @@ public sealed class StrictAdminHandler : AuthorizationHandler<StrictAdminRequire
             context.Succeed(requirement);
         }
 
-        return;
+        context.Fail();
     }
 }
