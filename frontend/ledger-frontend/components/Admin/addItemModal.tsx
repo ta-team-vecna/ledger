@@ -42,46 +42,6 @@ const AddItemModal = ({ open, onClose, onItemAdded }: AddItemModalProps) => {
     }));
   };
 
-  const verifyAdmin = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      
-      // First, get current user ID from the lying endpoint
-      const meResponse = await fetch('http://localhost:3001/api/auth/me', {
-        credentials: 'include'
-      });
-      
-      if (!meResponse.ok) {
-        throw new Error('Not authenticated');
-      }
-      
-      const me = await meResponse.json();
-      
-      // Then verify actual role from the TRUTH source
-      const usersResponse = await fetch('http://localhost:3001/api/users', {
-        credentials: 'include',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!usersResponse.ok) {
-        throw new Error('Failed to verify permissions');
-      }
-      
-      const users = await usersResponse.json();
-      const currentUser = users.find((u: any) => u.id === me.userId);
-      
-      if (!currentUser || currentUser.role !== 'Admin') {
-        throw new Error('You must be an admin to add items');
-      }
-      
-      return true;
-    } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Authentication failed');
-    }
-  };
-
   const handleSubmit = async () => {
     // Validate required fields
     if (!formData.name || !formData.type || !formData.serialNumber || !formData.condition || !formData.location) {
@@ -93,12 +53,6 @@ const AddItemModal = ({ open, onClose, onItemAdded }: AddItemModalProps) => {
     setError(null);
 
     try {
-      // First, VERIFY we're actually admin using the truth source
-      await verifyAdmin();
-
-      const token = localStorage.getItem('token');
-      
-      // Prepare payload - photoUrl is optional, so omit if empty
       const payload: EquipmentPayload = {
         name: formData.name,
         type: formData.type,
@@ -108,7 +62,6 @@ const AddItemModal = ({ open, onClose, onItemAdded }: AddItemModalProps) => {
         requiresAdminApproval: formData.requiresAdminApproval
       };
 
-      // Only include photoUrl if provided
       if (formData.photoUrl.trim()) {
         payload.photoUrl = formData.photoUrl;
       }
@@ -117,7 +70,6 @@ const AddItemModal = ({ open, onClose, onItemAdded }: AddItemModalProps) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(payload)
       });
