@@ -17,7 +17,6 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import CircularProgress from '@mui/material/CircularProgress';
-import Tooltip from '@mui/material/Tooltip';
 import styles from './AdminInventory.module.css';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 import { apiFetch } from '../../src/utils/apiFetch';
@@ -34,38 +33,6 @@ interface Equipment {
   photoUrl?: string;
   requiresAdminApproval: boolean;
 }
-
-interface Request {
-  id: string;
-  equipmentId: string;
-  status: string;
-  requestedFromUtc: string;
-  requestedToUtc: string;
-  requestedAtUtc: string;
-  checkedOutAtUtc: string | null;
-  returnedAtUtc: string | null;
-}
-
-// Status display configuration
-const STATUS_CONFIG: Record<string, { color: string; icon: string; label: string }> = {
-  'Available': { color: '#4caf50', icon: 'check_circle', label: 'Available' },
-  'Reserved': { color: '#ffc107', icon: 'event', label: 'Reserved' },
-  'CheckedOut': { color: '#1976d2', icon: 'sync_alt', label: 'Checked Out' },
-  'UnderRepair': { color: '#9c27b0', icon: 'build', label: 'Under Repair' },
-  'Retired': { color: '#9e9e9e', icon: 'delete_forever', label: 'Retired' },
-  'Overdue': { color: '#ff9800', icon: 'warning', label: 'Overdue' },
-  'Unavailable': { color: '#f44336', icon: 'cancel', label: 'Unavailable' },
-  'Returned': { color: '#9c27b0', icon: 'assignment_return', label: 'Returned' }  
-};
-
-// Status number mapping for API
-const STATUS_NUMBER: Record<string, number> = {
-  'available': 0,
-  'reserved': 1,
-  'borrow': 2,
-  'repair': 3,
-  'retired': 4
-};
 
 const AdminInventory = () => {
   const { loading: authLoading } = useAdminGuard();
@@ -113,10 +80,18 @@ const AdminInventory = () => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
+  const formatStatus = (status: string) => {
+  const statusMap: Record<string, string> = {
+    'CheckedOut': 'Checked Out',
+    'UnderRepair': 'Under Repair',
+    'Available': 'Available',
+    'Reserved': 'Reserved',
+    'Retired': 'Retired',
+    'Overdue': 'Overdue',
+    'Unavailable': 'Unavailable'
+  };
+  return statusMap[status] || status;
+};
 
 const isItemInUse = (itemId: string): boolean => {
   const item = equipment.find(e => e.id === itemId);

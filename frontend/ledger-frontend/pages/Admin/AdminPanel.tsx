@@ -39,36 +39,17 @@ interface TransformedRequest {
 }
 
 const AdminPanel = () => {
-  const { loading: authLoading } = useAdminGuard();
+    const { loading: authLoading } = useAdminGuard();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [totalItems, setTotalItems] = useState<number | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
-  const [actionFilter, setActionFilter] = useState('all');
-  const [actionLimit, setActionLimit] = useState(25);
-  const [requestFilter, setRequestFilter] = useState('all');
-  const [requestLimit, setRequestLimit] = useState(25);   
-  const [recentRequests, setRecentRequests] = useState<TransformedRequest[]>([]);
-  const [recentLoading, setRecentLoading] = useState(true);
-
-  // Fetch users
-  const fetchUsers = async () => {
-    try {
-      const response = await fetch('http://localhost:3001/api/users', {
-        credentials: 'include'
-      });
-      const data = await response.json();
-      setUsers(data);
-    } catch (error) {
-      console.error('Failed to fetch users:', error);
-    }
-  };
+  const [users, setUsers] = useState<Record<string, unknown>[]>([])
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    apiFetch(`${API_BASE}/api/users`)
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => setUsers(data))
+      .catch(() => console.error('Failed to fetch users'));
 
-  // Fetch equipment count
-  useEffect(() => {
     apiFetch(`${API_BASE}/api/equipment`)
       .then(res => res.ok ? res.json() : Promise.reject())
       .then((data: unknown[]) => setTotalItems(data.length))

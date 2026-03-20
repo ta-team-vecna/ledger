@@ -13,20 +13,37 @@ import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import styles from './AdminUsers.module.css';
-import { useAuth } from '../../hooks/useAuth';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import CircularProgress from '@mui/material/CircularProgress';
+import { apiFetch, API_BASE } from '../../src/utils/apiFetch';
+
+interface User {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  createdAt: string;
+  isAdmin: boolean;
+  role?: string;
+}
+
+interface UserResponse {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  createdAtUtc: string;
+}
 
 const AdminUsers = () => {
   const { loading: authLoading } = useAdminGuard();
-  const { user: currentUser} = useAuth();
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);  
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
@@ -35,6 +52,7 @@ const AdminUsers = () => {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [currentUserIdFromAuth, setCurrentUserIdFromAuth] = useState<string | null>(null);
 
   
 
@@ -42,17 +60,15 @@ const AdminUsers = () => {
   
   const fetchUsers = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/users', {
-        credentials: 'include',
-      });
+      const response = await apiFetch(`${API_BASE}/api/users`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      const data = await response.json();
+      const data: UserResponse[] = await response.json();
       
-      const transformedUsers = data.map((user: any) => ({
+      const transformedUsers = data.map((user: UserResponse) => ({
         id: user.id,
         firstName: user.firstName,
         lastName: user.lastName,
@@ -69,27 +85,25 @@ const AdminUsers = () => {
     }
   };
 
-  // Load current user
+  // Load users
   useEffect(() => {
-    const fetchCurrentUser = async () => {
+    fetchUsers();
+  }, []);
+
+  // Load current user ID
+  useEffect(() => {
+    const fetchCurrentUserId = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/auth/me', {
-          credentials: 'include'
-        });
+        const response = await apiFetch(`${API_BASE}/api/auth/me`);
         if (response.ok) {
           const data = await response.json();
-          setCurrentUserId(data.userId);
-        } 
+          setCurrentUserIdFromAuth(data.userId);
+        }
       } catch (error) {
         console.error('Failed to fetch current user:', error);
       }
     };
-    fetchCurrentUser();
-  }, []);
-
-  // Load users
-  useEffect(() => {
-    fetchUsers();
+    fetchCurrentUserId();
   }, []);
 
   if (authLoading) {
@@ -137,25 +151,17 @@ const AdminUsers = () => {
   if (!confirm(`Are you sure you want to ${action} this user?`)) return;
 
   try {
-    const token = localStorage.getItem('token');
-    
-   
-    const meResponse = await fetch('http://localhost:3001/api/auth/me', {
-      credentials: 'include'
-    });
+    const meResponse = await apiFetch(`${API_BASE}/api/auth/me`);
     const me = await meResponse.json();
     
-    const usersResponse = await fetch('http://localhost:3001/api/users', {
-      credentials: 'include',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+    const usersResponse = await apiFetch(`${API_BASE}/api/users`);
     
     if (!usersResponse.ok) {
       throw new Error('Failed to verify permissions');
     }
     
-    const users = await usersResponse.json();
-    const currentUser = users.find((u: any) => u.id === me.userId);
+    const userList: UserResponse[] = await usersResponse.json();
+    const currentUser = userList.find((u: UserResponse) => u.id === me.userId);
     
     // Double-check I'm actually admin
     if (!currentUser || currentUser.role !== 'Admin') {
@@ -163,12 +169,10 @@ const AdminUsers = () => {
     }
 
     // Now actually perform the role change
-    const response = await fetch(`http://localhost:3001/api/users/${userId}`, {
+    const response = await apiFetch(`${API_BASE}/api/users/${userId}`, {
       method: 'PATCH',
-      credentials: 'include',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({ role: newRole })
     });
@@ -182,19 +186,15 @@ const AdminUsers = () => {
     await fetchUsers();
     
     // Check if this was the current user
-    const updatedUsersResponse = await fetch('http://localhost:3001/api/users', {
-      credentials: 'include',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const updatedUsers = await updatedUsersResponse.json();
-    const updatedCurrentUser = updatedUsers.find((u: any) => u.id === me.userId);
+    const updatedUsersResponse = await apiFetch(`${API_BASE}/api/users`);
+    const updatedUsers: UserResponse[] = await updatedUsersResponse.json();
+    const updatedCurrentUser = updatedUsers.find((u: UserResponse) => u.id === me.userId);
 
     if (updatedCurrentUser?.id === userId) {
       alert('Your role has been changed. Logging you out...');
       
-      await fetch('http://localhost:3001/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include'
+      await apiFetch(`${API_BASE}/api/auth/logout`, {
+        method: 'POST'
       });
       
       localStorage.clear();
@@ -240,24 +240,17 @@ const AdminUsers = () => {
   
   try {
     // VERIFY admin status before deletion
-    const token = localStorage.getItem('token');
-    
-    const meResponse = await fetch('http://localhost:3001/api/auth/me', {
-      credentials: 'include'
-    });
+    const meResponse = await apiFetch(`${API_BASE}/api/auth/me`);
     const me = await meResponse.json();
     
-    const usersResponse = await fetch('http://localhost:3001/api/users', {
-      credentials: 'include',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+    const usersResponse = await apiFetch(`${API_BASE}/api/users`);
     
     if (!usersResponse.ok) {
       throw new Error('Failed to verify permissions');
     }
     
-    const users = await usersResponse.json();
-    const currentUser = users.find((u: any) => u.id === me.userId);
+    const userList: UserResponse[] = await usersResponse.json();
+    const currentUser = userList.find((u: UserResponse) => u.id === me.userId);
     
     if (!currentUser || currentUser.role !== 'Admin') {
       alert('You must be an admin to delete users');
@@ -276,12 +269,8 @@ const AdminUsers = () => {
 
     // Delete each selected user
     const deletePromises = selectedUsers.map(id => 
-      fetch(`http://localhost:3001/api/users/${id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      apiFetch(`${API_BASE}/api/users/${id}`, {
+        method: 'DELETE'
       })
     );
     
@@ -443,7 +432,7 @@ const AdminUsers = () => {
                   <td>
                   <div className={styles.actionButtons}>
                     <Button
-                      disabled={user.id === currentUser?.userId}
+                      disabled={user.id === currentUserIdFromAuth}
                       size="small"
                       variant="outlined"
                       className={`${styles.actionButton} ${user.isAdmin ? styles.demoteButton : styles.promoteButton}`}
