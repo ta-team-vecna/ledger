@@ -123,7 +123,7 @@ const isItemInUse = (itemId: string): boolean => {
   if (!item) return false;
   
   // Check if item is checked out
-  if (item.status === 'CheckedOut') return true;
+  if (item.status === 'CheckedOut' || item.status === 'Reserved') return true;
   
   // Check if there's an active request
   const activeRequest = requests.find(r => 
@@ -144,6 +144,7 @@ const getDisplayStatus = (item: Equipment): string => {
   if (item.status === 'UnderRepair') return 'UnderRepair';
   if (item.status === 'Retired') return 'Retired';
   if (item.status === 'Unavailable') return 'Unavailable';
+  if (item.status === 'Reserved') return 'Reserved';
   
   // Only use requests for future/predicted states
   const itemRequests = requests.filter(r => r.equipmentId === item.id);
@@ -196,8 +197,8 @@ const getDisplayStatus = (item: Equipment): string => {
       const start = new Date(activeRequest.requestedFromUtc);
       const end = new Date(activeRequest.requestedToUtc);
       
-      if (now >= start && now <= end) {
-        return { allowed: false, reason: 'Item is currently checked out' };
+      if (now >= start && now <= end || item.status === "Reserved") {
+        return { allowed: false, reason: 'Item is currently reserved' };
       }
     }
 
@@ -359,7 +360,7 @@ const getDisplayStatus = (item: Equipment): string => {
   if (authLoading || loading) {
     return (
       <>
-        <Topbar isAdmin={true} onMenuClick={() => setSidebarOpen(true)} />
+        <Topbar onMenuClick={() => setSidebarOpen(true)} />
         <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <div className={styles.loadingContainer}>Loading...</div>
       </>
@@ -368,7 +369,7 @@ const getDisplayStatus = (item: Equipment): string => {
 
   return (
     <>
-      <Topbar isAdmin={true} onMenuClick={() => setSidebarOpen(true)} />
+      <Topbar onMenuClick={() => setSidebarOpen(true)} />
       <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className={styles.inventoryContainer} style={{ 

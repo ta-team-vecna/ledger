@@ -170,7 +170,7 @@ const handleRejectRequest = async (requestId: string) => {
   if (authLoading) {
     return (
       <>
-        <Topbar isAdmin={true} onMenuClick={() => setSidebarOpen(true)} />
+        <Topbar onMenuClick={() => setSidebarOpen(true)} />
         <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <div className={styles.loadingContainer}>
           <div>Verifying access...</div>
@@ -182,7 +182,6 @@ const handleRejectRequest = async (requestId: string) => {
   return (
     <>
       <Topbar 
-        isAdmin={true} 
         onMenuClick={() => setSidebarOpen(true)}
       />
       
