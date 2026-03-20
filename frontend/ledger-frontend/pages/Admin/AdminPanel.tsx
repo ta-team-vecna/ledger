@@ -43,6 +43,12 @@ const AdminPanel = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [totalItems, setTotalItems] = useState<number | null>(null);
   const [users, setUsers] = useState<Record<string, unknown>[]>([])
+   const [recentRequests, setRecentRequests] = useState<TransformedRequest[]>([]);
+  const [recentLoading, setRecentLoading] = useState(true);
+  const [requestFilter, setRequestFilter] = useState('all');
+  const [requestLimit, setRequestLimit] = useState(10);
+  const [actionFilter, setActionFilter] = useState('all');
+  const [actionLimit, setActionLimit] = useState(10);
 
   useEffect(() => {
     apiFetch(`${API_BASE}/api/users`)

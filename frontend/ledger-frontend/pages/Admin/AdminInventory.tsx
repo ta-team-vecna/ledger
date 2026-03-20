@@ -20,6 +20,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import styles from './AdminInventory.module.css';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 import { apiFetch } from '../../src/utils/apiFetch';
+import Tooltip from '@mui/material/Tooltip'; 
 import AddItemModal from '../../components/Admin/addItemModal';
 
 interface Equipment {
@@ -32,6 +33,16 @@ interface Equipment {
   location: string;
   photoUrl?: string;
   requiresAdminApproval: boolean;
+}
+
+interface Request {  
+  id: string;
+  equipmentId: string;
+  status: string;
+  requestedAtUtc: string;
+  requestedFromUtc: string;
+  requestedToUtc: string;
+  returnedAtUtc: string | null;
 }
 
 const AdminInventory = () => {
@@ -91,6 +102,27 @@ const AdminInventory = () => {
     'Unavailable': 'Unavailable'
   };
   return statusMap[status] || status;
+};
+
+// Status display configuration
+const STATUS_CONFIG: Record<string, { color: string; icon: string; label: string }> = {
+  'Available': { color: '#4caf50', icon: 'check_circle', label: 'Available' },
+  'Reserved': { color: '#ffc107', icon: 'event', label: 'Reserved' },
+  'CheckedOut': { color: '#1976d2', icon: 'sync_alt', label: 'Checked Out' },
+  'UnderRepair': { color: '#9c27b0', icon: 'build', label: 'Under Repair' },
+  'Retired': { color: '#9e9e9e', icon: 'delete_forever', label: 'Retired' },
+  'Overdue': { color: '#ff9800', icon: 'warning', label: 'Overdue' },
+  'Unavailable': { color: '#f44336', icon: 'cancel', label: 'Unavailable' },
+  'Returned': { color: '#9c27b0', icon: 'assignment_return', label: 'Returned' }
+};
+
+// Status number mapping for API
+const STATUS_NUMBER: Record<string, number> = {
+  'available': 0,
+  'reserved': 1,
+  'borrow': 2,
+  'repair': 3,
+  'retired': 4
 };
 
 const isItemInUse = (itemId: string): boolean => {
@@ -180,7 +212,9 @@ const getDisplayStatus = (item: Equipment): string => {
     return { allowed: true };
   };
 
-  
+  useEffect(() => {
+  fetchData();
+}, []);
 
   // Handle status change
   const handleStatusChange = async (action: string) => {
