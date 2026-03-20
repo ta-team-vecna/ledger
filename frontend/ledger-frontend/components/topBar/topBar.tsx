@@ -8,7 +8,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import Alert from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
 import styles from './topBar.module.css';
-import { useAuth } from '../../hooks/useAuth'; 
+import { useAuth } from '../../src/context/useAuth'; 
 
 interface TopbarProps {
   onMenuClick?: () => void;
