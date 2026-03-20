@@ -281,8 +281,8 @@ public sealed class RequestsController : ControllerBase {
             return NotFound(ApiErrors.NotFound("Request was not found."));
         }
 
-        if (request.Status is not (RequestStatus.Approved or RequestStatus.CheckedOut)) {
-            return BadRequest(ApiErrors.BadRequest("Invalid state", "Only approved or checked out equipment can be returned."));
+        if (request.Status != RequestStatus.CheckedOut) {
+            return BadRequest(ApiErrors.BadRequest("Invalid state", "Only checked out equipment can be returned."));
         }
 
         request.Status = RequestStatus.Returned;
@@ -291,6 +291,44 @@ public sealed class RequestsController : ControllerBase {
         request.Equipment.Status = EquipmentStatus.Available;
 
         // I: if time, query a free ai to check if notes indicate damage and mark for repair xD
+
+        await _db.SaveChangesAsync();
+
+        return NoContent();
+    }
+    
+    /// <summary>
+    /// Allows checking out equipment from a request.
+    /// </summary>
+    /// <param name="id">The unique identifier of the equipment request.</param>
+    /// <returns>An empty success response.</returns>
+    /// <response code="204">Successfully marked the equipment as checked out.</response>
+    /// <response code="400">If the request is not in an approved state.</response>
+    /// <response code="404">If the request could not be found.</response>
+    /// <response code="401">If the user is not authenticated.</response>
+    /// <response code="403">If the user does not have StrictAdmin privileges.</response>
+    [HttpPut("{id:guid}/checkout")]
+    [Authorize(Policy = "StrictAdmin")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult> Checkout(Guid id) {
+        var request = await _db.EquipmentRequests
+            .Include(r => r.Equipment)
+            .FirstOrDefaultAsync(x => x.Id == id);
+
+        if (request is null) {
+            return NotFound(ApiErrors.NotFound("Request was not found."));
+        }
+
+        if (request.Status != RequestStatus.Approved) {
+            return BadRequest(ApiErrors.BadRequest("Invalid state", "Only approved requests can be checked out."));
+        }
+
+        request.Status = RequestStatus.CheckedOut;
+        request.CheckedOutAtUtc = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
 
