@@ -93,8 +93,7 @@ const RequestModal = ({ open, onClose, onRequestSubmitted }: RequestModalProps) 
       if (newMode === 'all') {
         setFilteredEquipment(equipment);
       } else {
-        // 'open' mode - items that require admin approval
-        setFilteredEquipment(equipment.filter(item => item.requiresAdminApproval === true));
+        setFilteredEquipment(equipment.filter(item => !item.requiresAdminApproval));
       }
     }
   };
