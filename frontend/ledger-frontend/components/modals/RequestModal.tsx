@@ -14,7 +14,10 @@ import {
   MenuItem,
   FormHelperText,
   InputAdornment,
-  Chip
+  Chip,
+  Tooltip,
+  ToggleButton,
+  ToggleButtonGroup
 } from '@mui/material';
 import Icon from '@mui/material/Icon';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -28,17 +31,20 @@ interface Equipment {
   type: string;
   serialNumber: string;
   status: string;
+  requiresAdminApproval: boolean;
 }
 
 interface RequestModalProps {
   open: boolean;
   onClose: () => void;
   onRequestSubmitted: () => void;
-  userId?: string; // Optional - for admin mode vs user mode
+  userId?: string;
 }
 
 const RequestModal = ({ open, onClose, onRequestSubmitted, userId }: RequestModalProps) => {
   const [equipment, setEquipment] = useState<Equipment[]>([]);
+  const [filteredEquipment, setFilteredEquipment] = useState<Equipment[]>([]);
+  const [filterMode, setFilterMode] = useState<'all' | 'open'>('all');
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +75,7 @@ const RequestModal = ({ open, onClose, onRequestSubmitted, userId }: RequestModa
           item.status.toLowerCase() === 'available'
         );
         setEquipment(available);
+        setFilteredEquipment(available);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load equipment');
       } finally {
@@ -79,16 +86,26 @@ const RequestModal = ({ open, onClose, onRequestSubmitted, userId }: RequestModa
     fetchEquipment();
   }, [open]);
 
-  // CUSTOM VALIDATION because backend can't be trusted
+  // Handle filter change
+  const handleFilterChange = (_event: React.MouseEvent<HTMLElement>, newMode: 'all' | 'open' | null) => {
+    if (newMode !== null) {
+      setFilterMode(newMode);
+      if (newMode === 'all') {
+        setFilteredEquipment(equipment);
+      } else {
+        // 'open' mode - items that require admin approval
+        setFilteredEquipment(equipment.filter(item => item.requiresAdminApproval === true));
+      }
+    }
+  };
+
   const validateForm = () => {
     const errors: Record<string, string> = {};
 
-    // Equipment validation
     if (!formData.equipmentId) {
       errors.equipmentId = 'Please select equipment';
     }
 
-    // Date validation - Start date
     if (!formData.requestedFromUtc) {
       errors.requestedFromUtc = 'Start date is required';
     } else {
@@ -100,13 +117,11 @@ const RequestModal = ({ open, onClose, onRequestSubmitted, userId }: RequestModa
         errors.requestedFromUtc = 'Start date cannot be in the past';
       }
 
-      // Sanity check: not before year 2000 
       if (startDate.getFullYear() < 2000) {
         errors.requestedFromUtc = 'Invalid start date';
       }
     }
 
-    // Date validation - End date
     if (!formData.requestedToUtc) {
       errors.requestedToUtc = 'End date is required';
     } else {
@@ -117,7 +132,6 @@ const RequestModal = ({ open, onClose, onRequestSubmitted, userId }: RequestModa
         errors.requestedToUtc = 'End date must be after start date';
       }
 
-      // Max rental period: 30 days
       if (formData.requestedFromUtc) {
         const maxEndDate = new Date(startDate);
         maxEndDate.setDate(maxEndDate.getDate() + 30);
@@ -127,7 +141,6 @@ const RequestModal = ({ open, onClose, onRequestSubmitted, userId }: RequestModa
         }
       }
 
-      // Sanity check: not after year 2100 
       if (endDate.getFullYear() > 2100) {
         errors.requestedToUtc = 'Invalid end date';
       }
@@ -139,12 +152,10 @@ const RequestModal = ({ open, onClose, onRequestSubmitted, userId }: RequestModa
 
   const handleDateChange = (field: string, value: Date | null) => {
     if (value) {
-      // Store in UTC format that backend expects
       setFormData(prev => ({
         ...prev,
         [field]: value.toISOString()
       }));
-      // Clear field error
       if (fieldErrors[field]) {
         setFieldErrors(prev => ({ ...prev, [field]: '' }));
       }
@@ -159,55 +170,79 @@ const RequestModal = ({ open, onClose, onRequestSubmitted, userId }: RequestModa
   };
 
   const handleSubmit = async () => {
-    if (!validateForm()) {
-      return;
+  if (!validateForm()) {
+    return;
+  }
+
+  setSubmitting(true);
+  setError(null);
+
+  try {
+    const token = localStorage.getItem('token');
+    
+    // Get the selected equipment to check if it needs approval
+    const selectedEquipment = equipment.find(e => e.id === formData.equipmentId);
+    
+    // Step 1: Create the request
+    const createResponse = await fetch('http://localhost:3001/api/requests', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(formData)
+    });
+
+    const createData = await createResponse.json();
+
+    if (!createResponse.ok) {
+      if (createData.errors) {
+        const backendErrors: Record<string, string> = {};
+        Object.keys(createData.errors).forEach(key => {
+          backendErrors[key] = createData.errors[key][0];
+        });
+        setFieldErrors(backendErrors);
+      }
+      throw new Error(createData.message || 'Failed to submit request');
     }
 
-    setSubmitting(true);
-    setError(null);
-
-    try {
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch('http://localhost:3001/api/requests', {
-        method: 'POST',
+    const requestId = createData.id;
+    
+    // Step 2: Auto-approve if the item doesn't require admin approval
+    if (selectedEquipment && !selectedEquipment.requiresAdminApproval) {
+      const approveResponse = await fetch(`http://localhost:3001/api/requests/${requestId}/approve`, {
+        method: 'PUT',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(formData)
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        // Handle backend validation errors (even though i don't trust them)
-        if (data.errors) {
-          const backendErrors: Record<string, string> = {};
-          Object.keys(data.errors).forEach(key => {
-            backendErrors[key] = data.errors[key][0];
-          });
-          setFieldErrors(backendErrors);
         }
-        throw new Error(data.message || 'Failed to submit request');
-      }
-
-      // Success
-      setFormData({
-        equipmentId: '',
-        requestedFromUtc: '',
-        requestedToUtc: ''
       });
-      
-      onRequestSubmitted();
-      onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setSubmitting(false);
+
+      if (!approveResponse.ok) {
+        console.warn('Auto-approve failed, but request was created');
+        alert('Request created but auto-approval failed. Please wait for admin approval.');
+      } else {
+        console.log('Request created and auto-approved!');
+        alert("Request was created, and automatically approved")
+      }
     }
-  };
+
+    // Reset form and close
+    setFormData({
+      equipmentId: '',
+      requestedFromUtc: '',
+      requestedToUtc: ''
+    });
+    
+    onRequestSubmitted();
+    onClose();
+  } catch (err) {
+    setError(err instanceof Error ? err.message : 'An error occurred');
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   const handleClose = () => {
     if (!submitting) {
@@ -254,6 +289,27 @@ const RequestModal = ({ open, onClose, onRequestSubmitted, userId }: RequestModa
             </Alert>
           ) : (
             <>
+              {/* Filter Toggle */}
+              <div className={styles.filterContainer}>
+                <ToggleButtonGroup
+                  size="small"
+                  value={filterMode}
+                  exclusive
+                  onChange={handleFilterChange}
+                  aria-label="equipment filter"
+                  className={styles.filterGroup}
+                >
+                  <ToggleButton value="all" aria-label="all equipment">
+                    <Icon className={styles.filterIcon}>list</Icon>
+                    All
+                  </ToggleButton>
+                  <ToggleButton value="open" aria-label="requires approval">
+                    <Icon className={styles.filterIcon}>lock_open</Icon>
+                    Open (No Approval)
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              </div>
+
               <FormControl fullWidth margin="dense" className={styles.field}>
                 <InputLabel>Equipment *</InputLabel>
                 <Select
@@ -263,7 +319,7 @@ const RequestModal = ({ open, onClose, onRequestSubmitted, userId }: RequestModa
                   disabled={submitting}
                   error={!!fieldErrors.equipmentId}
                 >
-                  {equipment.map((item) => (
+                  {filteredEquipment.map((item) => (
                     <MenuItem key={item.id} value={item.id}>
                       <div className={styles.equipmentOption}>
                         <span>{item.name}</span>
@@ -275,6 +331,26 @@ const RequestModal = ({ open, onClose, onRequestSubmitted, userId }: RequestModa
                           size="small" 
                           className={styles.equipmentType}
                         />
+                        {!item.requiresAdminApproval && (
+                          <Tooltip title="This item does NOT require admin approval">
+                            <Chip
+                              icon={<Icon className={styles.openIcon}>lock_open</Icon>}
+                              label="Open"
+                              size="small"
+                              className={styles.openChip}
+                            />
+                          </Tooltip>
+                        )}
+                        {item.requiresAdminApproval && (
+                          <Tooltip title="This item requires admin approval">
+                            <Chip
+                              icon={<Icon className={styles.lockedIcon}>lock</Icon>}
+                              label="Approval Required"
+                              size="small"
+                              className={styles.lockedChip}
+                            />
+                          </Tooltip>
+                        )}
                       </div>
                     </MenuItem>
                   ))}
@@ -305,7 +381,7 @@ const RequestModal = ({ open, onClose, onRequestSubmitted, userId }: RequestModa
                     }
                   }
                 }}
-                minDate={new Date()} // Can't start in the past
+                minDate={new Date()}
               />
 
               <DatePicker
@@ -336,7 +412,7 @@ const RequestModal = ({ open, onClose, onRequestSubmitted, userId }: RequestModa
                 <Icon className={styles.noteIcon}>info</Icon>
                 <small>
                   Maximum rental period: 30 days.
-                  {equipment.length > 0 && ` ${equipment.length} items available.`}
+                  {equipment.length > 0 && ` ${filteredEquipment.length} items shown (${equipment.length} total)`}
                 </small>
               </div>
             </>
@@ -354,7 +430,7 @@ const RequestModal = ({ open, onClose, onRequestSubmitted, userId }: RequestModa
           <Button 
             onClick={handleSubmit} 
             variant="contained" 
-            disabled={submitting || loading || equipment.length === 0}
+            disabled={submitting || loading || filteredEquipment.length === 0}
             className={styles.submitButton}
             startIcon={submitting ? <CircularProgress size={20} color="inherit" /> : <Icon>send</Icon>}
           >

@@ -127,3 +127,46 @@
     margin-left: 0 !important;
   }
 }
+
+/* Add to RequestModal.module.css */
+.filterContainer {
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.filterGroup {
+  background-color: #FFF;
+}
+
+.filterIcon {
+  font-size: 16px !important;
+  margin-right: 4px;
+}
+
+.equipmentOption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.openChip {
+  background-color: #4caf50 !important;
+  color: white !important;
+  font-size: 10px !important;
+  height: 20px !important;
+}
+
+.lockedChip {
+  background-color: #ff9800 !important;
+  color: white !important;
+  font-size: 10px !important;
+  height: 20px !important;
+}
+
+.openIcon, .lockedIcon {
+  font-size: 14px !important;
+  margin-right: 2px !important;
+}

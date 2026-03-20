@@ -176,7 +176,7 @@ const AdminRequests = () => {
 
   return (
     <>
-      <Topbar isAdmin={true} onMenuClick={() => setSidebarOpen(true)} />
+      <Topbar isAdmin={true} onMenuClick={() => setSidebarOpen(true)} /> 
       <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className={styles.container} style={{ 
