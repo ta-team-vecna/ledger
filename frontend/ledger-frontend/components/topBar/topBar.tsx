@@ -76,6 +76,7 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
             </IconButton>
             <Menu anchorEl={anchorEl} open={open} onClose={handleClose}>
               <MenuItem onClick={handleClose} component="a" href="/dashboard">Dashboard</MenuItem>
+              <MenuItem onClick={handleClose} component="a" href="/inventory">Inventory</MenuItem>
               <MenuItem onClick={handleClose} component="a" href="/requests">Requests</MenuItem>
               <MenuItem onClick={handleClose} component="a" href="/reports">Reports</MenuItem>
               <MenuItem 
@@ -108,6 +109,7 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
             
             <div style={{ display: 'flex', gap: '20px', flex: 1 }}>
               <a href="/dashboard">Dashboard</a>
+              <a href="/inventory">Inventory</a>
               <a href="/requests">Requests</a>
               <a href="/reports">Reports</a>
               <a 
