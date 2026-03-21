@@ -15,9 +15,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // auto-logout when refresh token fails
   useEffect(() => {
     function onSessionExpired() {
-      fetch(`${API_BASE}/api/auth/logout`, {
-        method: "POST",
-        credentials: "include",
+      apiFetch(`${API_BASE}/api/auth/logout`, {
+        method: "POST"
       }).finally(() => setUser(null));
     }
 
@@ -36,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const me = await res.json();
 
+      // Fetch fresh role from database via /users endpoint
       const userRes = await apiFetch(`${API_BASE}/api/users/${me.userId}`);
       const role = userRes.ok ? (await userRes.json()).role : me.role;
 
@@ -48,10 +48,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function login(email: string, password: string) {
-    const res = await fetch(`${API_BASE}/api/auth/login`, {
+    const res = await apiFetch(`${API_BASE}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify({ email, password }),
     });
 
@@ -75,10 +74,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function register(firstName: string, lastName: string, email: string, password: string) {
-    const res = await fetch(`${API_BASE}/api/auth/register`, {
+    const res = await apiFetch(`${API_BASE}/api/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      credentials: "include",
       body: JSON.stringify({ firstName, lastName, email, password }),
     });
 
@@ -102,9 +100,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function logout() {
-    await fetch(`${API_BASE}/api/auth/logout`, {
-      method: "POST",
-      credentials: "include",
+    await apiFetch(`${API_BASE}/api/auth/logout`, {
+      method: "POST"
     });
     setUser(null);
   }

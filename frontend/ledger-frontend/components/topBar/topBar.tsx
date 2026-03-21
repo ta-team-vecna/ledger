@@ -8,24 +8,16 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import Alert from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
 import styles from './topBar.module.css';
-import { useAdminGuard } from '../../hooks/useAdminGuard'; //Import the hook
+import { useAuth } from '../../src/context/useAuth'; 
+import { apiFetch, API_BASE } from '../../src/utils/apiFetch';
 
 interface TopbarProps {
-  isAdmin?: boolean;  // This prop is now optional - we'll use the hook instead
   onMenuClick?: () => void;
-  adminMenuOpen?: boolean;
 }
 
-const Topbar: React.FC<TopbarProps> = ({ 
-  isAdmin: propIsAdmin, // Rename to avoid confusion
-  onMenuClick, 
-  adminMenuOpen 
-}) => {
-  // Use the hook to get REAL admin status
-  const { isAdmin: hookIsAdmin, loading } = useAdminGuard();
-  
-  // Use hook result if available, otherwise fall back to prop
-  const isAdmin = hookIsAdmin ?? propIsAdmin ?? false;
+const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
+  const { user } = useAuth(); 
+  const isAdmin = user?.role === 'Admin';
   
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const [showAdminAlert, setShowAdminAlert] = React.useState(false);
@@ -42,9 +34,8 @@ const Topbar: React.FC<TopbarProps> = ({
 
   const handleLogout = async () => {
     try {
-      await fetch('http://localhost:3001/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include'
+      await apiFetch(`${API_BASE}/api/auth/logout`, {
+        method: 'POST'
       });
       
       localStorage.clear();
@@ -57,18 +48,11 @@ const Topbar: React.FC<TopbarProps> = ({
   };
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
-    // Check if trying to access admin panel without admin rights
     if (path === '/admin' && !isAdmin) {
       e.preventDefault();
       setShowAdminAlert(true);
     }
-    // For other links, let them navigate normally
   };
-
-  // Don't render until we know admin status
-  if (loading) {
-    return <div className={styles.topBar} style={{ justifyContent: 'center' }}>Loading...</div>;
-  }
 
   return (
     <>
@@ -78,49 +62,22 @@ const Topbar: React.FC<TopbarProps> = ({
         onClose={() => setShowAdminAlert(false)}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
-        <Alert 
-          severity="error" 
-          onClose={() => setShowAdminAlert(false)}
-          sx={{ width: '100%' }}
-        >
+        <Alert severity="error" onClose={() => setShowAdminAlert(false)}>
           You don't have permission to access the admin panel
         </Alert>
       </Snackbar>
 
       <div className={styles.topBar}>
         {isMobile ? (
-          // Mobile: Hamburger menu with logout
+          // Mobile menu
           <>
-            <IconButton
-              id="menu-button"
-              aria-controls={open ? 'basic-menu' : undefined}
-              aria-haspopup="true"
-              aria-expanded={open ? 'true' : undefined}
-              onClick={handleClick}
-              sx={{ color: 'white' }}
-            >
+            <IconButton onClick={handleClick} sx={{ color: 'white' }}>
               <MenuIcon />
             </IconButton>
-            <Menu
-              id="basic-menu"
-              anchorEl={anchorEl}
-              open={open}
-              onClose={handleClose}
-              slotProps={{
-                list: {
-                  'aria-labelledby': 'menu-button',
-                },
-              }}
-            >
-              <MenuItem onClick={handleClose}>
-                <a href="/dashboard" style={{ textDecoration: 'none', color: 'inherit' }}>Dashboard</a>
-              </MenuItem>
-              <MenuItem onClick={handleClose}>
-                <a href="/requests" style={{ textDecoration: 'none', color: 'inherit' }}>Requests</a>
-              </MenuItem>
-              <MenuItem onClick={handleClose}>
-                <a href="/reports" style={{ textDecoration: 'none', color: 'inherit' }}>Reports</a>
-              </MenuItem>
+            <Menu anchorEl={anchorEl} open={open} onClose={handleClose}>
+              <MenuItem onClick={handleClose} component="a" href="/dashboard">Dashboard</MenuItem>
+              <MenuItem onClick={handleClose} component="a" href="/requests">Requests</MenuItem>
+              <MenuItem onClick={handleClose} component="a" href="/reports">Reports</MenuItem>
               <MenuItem 
                 onClick={(e) => {
                   if (!isAdmin) {
@@ -131,30 +88,24 @@ const Topbar: React.FC<TopbarProps> = ({
                     window.location.href = '/admin';
                   }
                 }}
+                sx={{ color: !isAdmin ? '#999' : 'inherit' }}
               >
-                <span style={{ color: !isAdmin ? '#999' : 'inherit' }}>
-                  Admin panel
-                </span>
+                Admin panel
               </MenuItem>
-              <MenuItem onClick={handleLogout} sx={{ color: '#f44336', borderTop: '1px solid #eee', mt: 1 }}>
+              <MenuItem onClick={handleLogout} sx={{ color: '#f44336' }}>
                 <LogoutIcon fontSize="small" sx={{ mr: 1 }} /> Logout
               </MenuItem>
             </Menu>
           </>
         ) : (
-          // Desktop: Row of links with logout button
+          // Desktop
           <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-            {/* Admin menu button - only shown in admin panel */}
             {isAdmin && (
-              <IconButton
-                onClick={onMenuClick}
-                sx={{ color: 'white', mr: 2 }}
-              >
+              <IconButton onClick={onMenuClick} sx={{ color: 'white', mr: 2 }}>
                 <MenuIcon />
               </IconButton>
             )}
             
-            {/* Regular nav links */}
             <div style={{ display: 'flex', gap: '20px', flex: 1 }}>
               <a href="/dashboard">Dashboard</a>
               <a href="/requests">Requests</a>
@@ -171,17 +122,7 @@ const Topbar: React.FC<TopbarProps> = ({
               </a>
             </div>
             
-            {/* Logout button */}
-            <IconButton
-              onClick={handleLogout}
-              sx={{ 
-                color: 'white',
-                '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)'
-                }
-              }}
-              title="Logout"
-            >
+            <IconButton onClick={handleLogout} sx={{ color: 'white' }} title="Logout">
               <LogoutIcon />
             </IconButton>
           </div>

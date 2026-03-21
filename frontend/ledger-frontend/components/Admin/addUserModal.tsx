@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent } from 'react';
+import { apiFetch, API_BASE } from '../../src/utils/apiFetch';
 import {
   Dialog,
   DialogTitle,
@@ -93,42 +94,10 @@ const AddUserModal = ({ open, onClose, onUserAdded }: AddUserModalProps) => {
     setError(null);
 
     try {
-      // Get the REAL current user from the RELIABLE source
-      const token = localStorage.getItem('token');
-      
-      // First, get current user ID
-      const meResponse = await fetch('http://localhost:3001/api/auth/me', {
-        credentials: 'include'
-      });
-      const me = await meResponse.json();
-      
-      // Then get ALL users to verify I'm actually admin
-      const usersResponse = await fetch('http://localhost:3001/api/users', {
-        credentials: 'include',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!usersResponse.ok) {
-        throw new Error('Failed to verify admin status');
-      }
-      
-      const users = await usersResponse.json();
-      const currentUser = users.find((u: any) => u.id === me.userId);
-      
-      // Double-check I'm actually admin
-      if (!currentUser || currentUser.role !== 'Admin') {
-        throw new Error('You must be an admin to create users');
-      }
-
-      // Now actually create the user (using the same reliable endpoint)
-      const response = await fetch('http://localhost:3001/api/users', {
+      const response = await apiFetch(`${API_BASE}/api/users`, {
         method: 'POST',
-        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(formData)
       });

@@ -2,14 +2,13 @@ import { useState, useEffect } from "react";
 import styles from "./Dashboard.module.css";
 import { Button } from "@mui/material";
 import Topbar from "../../components/topBar/topBar";
-import { apiFetch } from '../../src/utils/apiFetch';
+import { apiFetch, API_BASE } from '../../src/utils/apiFetch';
 import Icon from "@mui/material/Icon";
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import Divider from '@mui/material/Divider';
 import ListItemText from '@mui/material/ListItemText';
-
-const API_BASE = "http://localhost:3001";
+import RequestModal from "../../components/modals/RequestModal"
 
 function generateItems() {
   return [];
@@ -17,6 +16,7 @@ function generateItems() {
 
 const Dashboard = () => {
   const [totalItems, setTotalItems] = useState<number | null>(null);
+  const [requestModalOpen, setRequestModalOpen] = useState(false);
 
   useEffect(() => {
     apiFetch(`${API_BASE}/api/equipment`)
@@ -33,7 +33,12 @@ const Dashboard = () => {
         Track, request and organize all your school supplies{" "}
       </p>
       <div className={styles.mainButtonRow}>
-        <Button variant="contained">Request equipment</Button>
+        <Button 
+        variant="contained"
+        onClick={() => setRequestModalOpen(true)}
+      >
+        Request equipment
+      </Button>
         <Button variant="outlined">View inventory</Button>
       </div>
       <div className={styles.ActionButtonList}>
@@ -143,6 +148,14 @@ const Dashboard = () => {
                     
             </div>    
       </div>
+            <RequestModal
+        open={requestModalOpen}
+        onClose={() => setRequestModalOpen(false)}
+        onRequestSubmitted={() => {
+          console.log('Request submitted, refresh list if needed');
+          setRequestModalOpen(false);
+        }}
+      />
     </>
   );
 };

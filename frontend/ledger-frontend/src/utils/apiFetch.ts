@@ -1,13 +1,6 @@
 const API_BASE = "http://localhost:3001";
 
 let refreshPromise: Promise<boolean> | null = null;
-let isRefreshing = false;
-let pendingQueue: Array<() => void> = [];
-
-function drainQueue() {
-  pendingQueue.forEach((resolve) => resolve());
-  pendingQueue = [];
-}
 
 async function refreshTokens(): Promise<boolean> {
   try {
@@ -21,10 +14,14 @@ async function refreshTokens(): Promise<boolean> {
   }
 }
 
-function waitForRefresh(): Promise<void> {
-  return new Promise((resolve) => {
-    pendingQueue.push(resolve);
-  });
+async function doRefresh(): Promise<boolean> {
+  // Deduplicate: all callers share a single refresh request
+  if (!refreshPromise) {
+    refreshPromise = refreshTokens().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
 }
 
 export async function apiFetch(
@@ -34,26 +31,19 @@ export async function apiFetch(
   const url = input.startsWith("http") ? input : `${API_BASE}${input}`;
   const options: RequestInit = { ...init, credentials: "include" };
 
-  // if a refresh is already in progress, wait for it before even trying
-  if (isRefreshing) {
-    await waitForRefresh();
-    return fetch(url, options);
+  // If a refresh is already in progress, wait for it before firing the request
+  if (refreshPromise) {
+    const refreshed = await refreshPromise;
+    if (!refreshed) {
+      window.dispatchEvent(new Event("auth:session-expired"));
+      return new Response(null, { status: 401 });
+    }
   }
 
   const response = await fetch(url, options);
 
   if (response.status === 401) {
-    // first request to notice 401 kicks off refresh
-    if (!refreshPromise) {
-      isRefreshing = true;
-      refreshPromise = refreshTokens().finally(() => {
-        isRefreshing = false;
-        refreshPromise = null;
-        drainQueue();
-      });
-    }
-
-    const refreshed = await refreshPromise;
+    const refreshed = await doRefresh();
 
     if (refreshed) {
       return fetch(url, options);

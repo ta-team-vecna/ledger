@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, FormControlLabel, Checkbox, CircularProgress, Alert } from '@mui/material';
 import Icon from '@mui/material/Icon';
-import { apiFetch } from '../../src/utils/apiFetch';
+import { apiFetch, API_BASE } from '../../src/utils/apiFetch';
 import styles from './addItemModal.module.css';
 
 interface AddItemModalProps {
@@ -66,7 +66,7 @@ const AddItemModal = ({ open, onClose, onItemAdded }: AddItemModalProps) => {
         payload.photoUrl = formData.photoUrl;
       }
 
-      const response = await apiFetch('http://localhost:3001/api/equipment', {
+      const response = await apiFetch(`${API_BASE}/api/equipment`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
