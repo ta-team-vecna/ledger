@@ -63,7 +63,7 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
         <Alert severity="error" onClose={() => setShowAdminAlert(false)}>
-          You don't have permission to access the admin panel
+          You don't have permission to access this page 
         </Alert>
       </Snackbar>
 
@@ -109,7 +109,16 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
             <div style={{ display: 'flex', gap: '20px', flex: 1 }}>
               <a href="/dashboard">Dashboard</a>
               <a href="/requests">Requests</a>
-              <a href="/reports">Reports</a>
+                            <a 
+                href="/admin/reports"
+                onClick={(e) => handleNavClick(e, '/admin')}
+                style={{ 
+                  color: !isAdmin ? '#999' : 'white',
+                  cursor: !isAdmin ? 'not-allowed' : 'pointer'
+                }}
+              >
+                Reports
+              </a>
               <a 
                 href="/admin"
                 onClick={(e) => handleNavClick(e, '/admin')}

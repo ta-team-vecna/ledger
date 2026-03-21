@@ -7,6 +7,7 @@ import RequestsTable from '../../pages/PublicRequest/PublicRequestTable';
 const LoginPage = lazy(() => import('../../pages/LandPage/LoginPage'));
 const RegisterPage = lazy(() => import('../../pages/LandPage/RegisterPage'));
 const Dashboard = lazy(() => import('../../pages/Dashboard/Dashboard'));
+const AdminReports = lazy(() => import('../../pages/Admin/AdminReports'))
 const AdminPanel = lazy(() => import('../../pages/Admin/AdminPanel')); 
 
 const AdminUsers = lazy(() => import('../../pages/Admin/AdminUsers'));
@@ -86,5 +87,13 @@ export const router = createBrowserRouter([
         <RequestsTable/>
       </ProtectedRoute>
     )
-  }
+  },
+  {
+  path: '/admin/reports',
+  element: withSuspense(
+    <AdminRoute>
+      <AdminReports/>
+    </AdminRoute>
+  )
+}
 ]);
