@@ -40,10 +40,10 @@ interface RequestModalProps {
   open: boolean;
   onClose: () => void;
   onRequestSubmitted: () => void;
-  userId?: string;
+  preselectedEquipmentId?: string;
 }
 
-const RequestModal = ({ open, onClose, onRequestSubmitted }: RequestModalProps) => {
+const RequestModal = ({ open, onClose, onRequestSubmitted, preselectedEquipmentId }: RequestModalProps) => {
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [filteredEquipment, setFilteredEquipment] = useState<Equipment[]>([]);
   const [filterMode, setFilterMode] = useState<'all' | 'open'>('all');
@@ -58,24 +58,26 @@ const RequestModal = ({ open, onClose, onRequestSubmitted }: RequestModalProps) 
     requestedToUtc: ''
   });
 
-  // Fetch available equipment on mount
+  // Fetch requestable equipment on open
   useEffect(() => {
     const fetchEquipment = async () => {
       if (!open) return;
-      
+
       setLoading(true);
       try {
         const response = await apiFetch(`${API_BASE}/api/equipment`);
-        
         if (!response.ok) throw new Error('Failed to fetch equipment');
-        
         const data = await response.json();
-        // Filter to only available equipment
-        const available = data.filter((item: Equipment) => 
-          item.status.toLowerCase() === 'available'
-        );
-        setEquipment(available);
-        setFilteredEquipment(available);
+        // Exclude permanently unavailable items; users can still request items with future reservations
+        const bookable = data.filter((item: Equipment) => {
+          const s = item.status.toLowerCase();
+          return s !== 'underrepair' && s !== 'retired';
+        });
+        setEquipment(bookable);
+        setFilteredEquipment(bookable);
+        if (preselectedEquipmentId) {
+          setFormData(prev => ({ ...prev, equipmentId: preselectedEquipmentId }));
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load equipment');
       } finally {
@@ -84,7 +86,7 @@ const RequestModal = ({ open, onClose, onRequestSubmitted }: RequestModalProps) 
     };
 
     fetchEquipment();
-  }, [open]);
+  }, [open, preselectedEquipmentId]);
 
   // Handle filter change
   const handleFilterChange = (_event: React.MouseEvent<HTMLElement>, newMode: 'all' | 'open' | null) => {
