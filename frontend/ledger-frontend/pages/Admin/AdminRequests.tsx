@@ -25,7 +25,7 @@ interface EquipmentRequest {
   equipmentId: string;
   equipmentName: string;
   equipmentSerialNumber: string;
-  status: string; // Backend sends: 'Pending', 'Approved', 'Rejected', 'Returned'
+  status: string; // Backend sends RequestStatus enum values
   requestedAtUtc: string;
   requestedFromUtc: string;
   requestedToUtc: string;
@@ -70,14 +70,18 @@ const AdminRequests = () => {
 
   // Status display mappings (backend sends these exact strings)
   const statusConfig: Record<string, { color: string; label: string }> = {
-    'Pending': { color: '#ff9800', label: 'Pending' },
-    'Approved': { color: '#4caf50', label: 'Approved' },
-    'Rejected': { color: '#f44336', label: 'Rejected' },
-    'Returned': { color: '#9c27b0', label: 'Returned' }
+    Pending: { color: '#ff9800', label: 'Pending' },
+    Approved: { color: '#4caf50', label: 'Approved' },
+    Rejected: { color: '#f44336', label: 'Rejected' },
+    CheckedOut: { color: '#1976d2', label: 'Checked Out' },
+    Returned: { color: '#9c27b0', label: 'Returned' },
+    Cancelled: { color: '#9e9e9e', label: 'Cancelled' },
+    Overdue: { color: '#ff9800', label: 'Overdue' }
   };
 
   const getStatusColor = (status: string) => {
-    return statusConfig[status]?.color || '#999';
+    const key = status.replace(/\s/g, '');
+    return statusConfig[key]?.color || '#999';
   };
 
 
@@ -145,18 +149,20 @@ const AdminRequests = () => {
 
   // Normalize status for display
   const getDisplayStatus = (status: string) => {
+    const key = status.replace(/\s/g, '');
     const statusMap: Record<string, string> = {
-      'Pending': 'Pending',
-      'Approved': 'Approved',
-      'Rejected': 'Rejected',
-      'CheckedOut': 'Checked Out',
-      'Checked Out': 'Checked Out',
-      'Returned': 'Returned'
+      Pending: 'Pending',
+      Approved: 'Approved',
+      Rejected: 'Rejected',
+      CheckedOut: 'Checked Out',
+      Returned: 'Returned',
+      Cancelled: 'Cancelled',
+      Overdue: 'Overdue'
     };
-    return statusMap[status] || status;
+    return statusMap[key] || status;
   };
 
-  const statusButtons = ['all', 'Pending', 'Approved', 'Rejected', 'Returned'];
+  const statusButtons = ['all', 'Pending', 'Approved', 'CheckedOut', 'Rejected', 'Returned', 'Cancelled', 'Overdue'];
 
 
   if (authLoading || loading) {

@@ -17,7 +17,7 @@ interface Request {
   id: string;
   equipmentName: string;
   equipmentSerialNumber: string;
-  status: 'Pending' | 'Approved' | 'Rejected' | 'Returned';
+  status: 'Pending' | 'Approved' | 'Rejected' | 'CheckedOut' | 'Checked Out' | 'Returned' | 'Overdue' | 'Cancelled';
   requestedAtUtc: string;
   requestedFromUtc: string;
   requestedToUtc: string;
@@ -84,17 +84,27 @@ const RequestsTable = () => {
     const now = new Date();
     const start = new Date(req.requestedFromUtc);
     const end = new Date(req.requestedToUtc);
+    const normalizedStatus = req.status.replace(/\s/g, '').toLowerCase();
 
-    if (req.status === 'Returned') {
+    if (normalizedStatus === 'returned') {
       return { text: 'Returned', color: '#9c27b0', icon: 'assignment_return' };
     }
-    if (req.status === 'Rejected') {
+    if (normalizedStatus === 'rejected') {
       return { text: 'Rejected', color: '#f44336', icon: 'cancel' };
     }
-    if (req.status === 'Pending') {
+    if (normalizedStatus === 'pending') {
       return { text: 'Pending', color: '#ff9800', icon: 'hourglass_empty' };
     }
-    if (req.status === 'Approved') {
+    if (normalizedStatus === 'cancelled') {
+      return { text: 'Cancelled', color: '#9e9e9e', icon: 'block' };
+    }
+    if (normalizedStatus === 'overdue') {
+      return { text: 'Overdue', color: '#ff9800', icon: 'warning' };
+    }
+    if (normalizedStatus === 'checkedout') {
+      return { text: 'Checked Out', color: '#1976d2', icon: 'sync_alt' };
+    }
+    if (normalizedStatus === 'approved') {
       if (now < start) return { text: 'Reserved', color: '#ffc107', icon: 'event' };
       if (now > end) return { text: 'Overdue', color: '#ff9800', icon: 'warning' };
       if (req.checkedOutAtUtc) return { text: 'Checked Out', color: '#1976d2', icon: 'sync_alt' };
