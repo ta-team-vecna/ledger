@@ -64,6 +64,36 @@ public sealed class EquipmentController : ControllerBase {
     }
 
     /// <summary>
+    /// Returns active reservations (date ranges) for a specific equipment item.
+    /// </summary>
+    [HttpGet("{id:guid}/reservations")]
+    [ProducesResponseType(typeof(IReadOnlyList<EquipmentReservationResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<IReadOnlyList<EquipmentReservationResponse>>> GetReservations(Guid id) {
+        var exists = await _db.Equipment.AnyAsync(x => x.Id == id);
+        if (!exists) {
+            return NotFound(ApiErrors.NotFound("Equipment was not found."));
+        }
+
+        var reservations = await _db.EquipmentRequests
+            .AsNoTracking()
+            .Where(r => r.EquipmentId == id
+                && r.Status != RequestStatus.Rejected
+                && r.Status != RequestStatus.Returned
+                && r.Status != RequestStatus.Cancelled)
+            .OrderBy(r => r.RequestedFromUtc)
+            .Select(r => new EquipmentReservationResponse(
+                r.RequestedFromUtc,
+                r.RequestedToUtc,
+                r.Status.ToString()
+            ))
+            .ToListAsync();
+
+        return Ok(reservations);
+    }
+
+    /// <summary>
     /// Creates a new equipment record.
     /// </summary>
     /// <param name="request">The details of the equipment to create.</param>
