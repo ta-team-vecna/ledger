@@ -78,7 +78,7 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
               <MenuItem onClick={handleClose} component="a" href="/dashboard">Dashboard</MenuItem>
               <MenuItem onClick={handleClose} component="a" href="/inventory">Inventory</MenuItem>
               <MenuItem onClick={handleClose} component="a" href="/requests">Requests</MenuItem>
-              <MenuItem onClick={handleClose} component="a" href="/reports">Reports</MenuItem>
+              {/* <MenuItem onClick={handleClose} component="a" href="/reports">Reports</MenuItem> */}
               <MenuItem 
                 onClick={(e) => {
                   if (!isAdmin) {
@@ -111,7 +111,7 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
               <a href="/dashboard">Dashboard</a>
               <a href="/inventory">Inventory</a>
               <a href="/requests">Requests</a>
-              <a href="/reports">Reports</a>
+              {/* <a href="/reports">Reports</a> */}
               <a 
                 href="/admin"
                 onClick={(e) => handleNavClick(e, '/admin')}

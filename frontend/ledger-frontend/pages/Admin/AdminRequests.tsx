@@ -86,21 +86,23 @@ const AdminRequests = () => {
   const getStatusDisplay = (req: EquipmentRequest) => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const end = new Date(req.requestedToUtc); end.setHours(0, 0, 0, 0);
-    const s = req.status.replace(/\s/g, '');
+    const start = new Date(req.requestedFromUtc); start.setHours(0, 0, 0, 0);
+    const s = req.status.replace(/\s/g, '').toLowerCase();
 
-    if (s === 'Returned')  return { text: 'Returned',    color: '#9c27b0', key: 'Returned' };
-    if (s === 'Rejected')  return { text: 'Rejected',    color: '#f44336', key: 'Rejected' };
-    if (s === 'Pending')   return { text: 'Pending',     color: '#ff9800', key: 'Pending' };
-    if (s === 'Cancelled') return { text: 'Cancelled',   color: '#9e9e9e', key: 'Cancelled' };
-    if (s === 'Overdue')   return { text: 'Overdue',     color: '#ff9800', key: 'Overdue' };
+    if (s === 'returned')  return { text: 'Returned',    color: '#9c27b0', key: 'Returned' };
+    if (s === 'rejected')  return { text: 'Rejected',    color: '#f44336', key: 'Rejected' };
+    if (s === 'pending')   return { text: 'Pending',     color: '#ff9800', key: 'Pending' };
+    if (s === 'cancelled') return { text: 'Cancelled',   color: '#9e9e9e', key: 'Cancelled' };
+    if (s === 'overdue')   return { text: 'Overdue',     color: '#ff9800', key: 'Overdue' };
 
-    if (s === 'CheckedOut') {
+    if (s === 'checkedout') {
       if (today > end) return { text: 'Overdue', color: '#ff9800', key: 'Overdue' };
       return { text: 'Checked Out', color: '#1976d2', key: 'CheckedOut' };
     }
 
-    if (s === 'Approved') {
+    if (s === 'approved') {
       if (today > end) return { text: 'Overdue', color: '#ff9800', key: 'Overdue' };
+      if (today < start) return { text: 'Reserved', color: '#ffc107', key: 'Approved' };
       return { text: 'Approved', color: '#4caf50', key: 'Approved' };
     }
 
