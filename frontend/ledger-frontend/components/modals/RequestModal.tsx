@@ -179,10 +179,7 @@ const RequestModal = ({ open, onClose, onRequestSubmitted, preselectedEquipmentI
   setError(null);
 
   try {
-    // Get the selected equipment to check if it needs approval
-    const selectedEquipment = equipment.find(e => e.id === formData.equipmentId);
-    
-    // Step 1: Create the request
+    // Create request; backend handles auto-approval for open items.
     const createResponse = await apiFetch(`${API_BASE}/api/requests`, {
       method: 'POST',
       headers: {
@@ -201,24 +198,14 @@ const RequestModal = ({ open, onClose, onRequestSubmitted, preselectedEquipmentI
         });
         setFieldErrors(backendErrors);
       }
-      throw new Error(createData.message || 'Failed to submit request');
+      throw new Error(createData.detail || createData.message || 'Failed to submit request');
     }
 
-    const requestId = createData.id;
-    
-    // Step 2: Auto-approve if the item doesn't require admin approval
-    if (selectedEquipment && !selectedEquipment.requiresAdminApproval) {
-      const approveResponse = await apiFetch(`${API_BASE}/api/requests/${requestId}/approve`, {
-        method: 'PUT'
-      });
-
-      if (!approveResponse.ok) {
-        console.warn('Auto-approve failed, but request was created');
-        alert('Request created but auto-approval failed. Please wait for admin approval.');
-      } else {
-        console.log('Request created and auto-approved!');
-        alert("Request was created, and automatically approved")
-      }
+    const createdStatus = String(createData.status ?? '').toLowerCase();
+    if (createdStatus === 'approved') {
+      alert('Request created and automatically approved.');
+    } else {
+      alert('Request submitted successfully. Awaiting admin approval.');
     }
 
     // Reset form and close
