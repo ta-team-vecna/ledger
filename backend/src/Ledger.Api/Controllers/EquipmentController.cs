@@ -206,12 +206,14 @@ public sealed class EquipmentController : ControllerBase {
     /// <returns>An empty success response.</returns>
     /// <response code="204">Successfully deleted the equipment.</response>
     /// <response code="404">If the equipment could not be found.</response>
+    /// <response code="409">If the equipment cannot be deleted because it has related requests.</response>
     /// <response code="401">If the user is not authenticated.</response>
     /// <response code="403">If the user does not have StrictAdmin privileges.</response>
     [HttpDelete("{id:guid}")]
     [Authorize(Policy = "StrictAdmin")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Delete(Guid id) {
@@ -220,8 +222,24 @@ public sealed class EquipmentController : ControllerBase {
             return NotFound(ApiErrors.NotFound("Equipment was not found."));
         }
 
-        _db.Remove(entity);
-        await _db.SaveChangesAsync();
+        var hasRelatedRequests = await _db.EquipmentRequests
+            .AnyAsync(x => x.EquipmentId == id);
+
+        if (hasRelatedRequests) {
+            return Conflict(ApiErrors.Conflict(
+                "Cannot delete equipment that has request history. Consider marking it as Retired instead."
+            ));
+        }
+
+        try {
+            _db.Remove(entity);
+            await _db.SaveChangesAsync();
+        }
+        catch (DbUpdateException) {
+            return Conflict(ApiErrors.Conflict(
+                "Cannot delete equipment because it is referenced by other records."
+            ));
+        }
 
         return NoContent();
     }

@@ -288,7 +288,19 @@ const getDisplayStatus = (item: Equipment): string => {
       const failed = results.filter(r => !r.ok);
       
       if (failed.length > 0) {
-        alert(`${failed.length} items could not be deleted`);
+        const reasons = await Promise.all(
+          failed.map(async response => {
+            try {
+              const payload = await response.json();
+              return payload?.detail ?? payload?.title ?? `HTTP ${response.status}`;
+            } catch {
+              return `HTTP ${response.status}`;
+            }
+          })
+        );
+
+        const uniqueReasons = Array.from(new Set(reasons));
+        alert(`${failed.length} items could not be deleted.\n${uniqueReasons.join('\n')}`);
       }
       
       await fetchData();
