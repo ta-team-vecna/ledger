@@ -66,6 +66,7 @@ public sealed class RequestsController : ControllerBase {
         var requests = await _db.EquipmentRequests
             .AsNoTracking()
             .Where(x => x.UserId == userId)
+            .OrderByDescending(x => x.RequestedAtUtc)
             .Select(ResponseFromEntity)
             .ToListAsync();
 
@@ -94,6 +95,7 @@ public sealed class RequestsController : ControllerBase {
         }
 
         var requests = await query
+            .OrderByDescending(x => x.RequestedAtUtc)
             .Select(ResponseFromEntity)
             .ToListAsync();
 
@@ -114,6 +116,7 @@ public sealed class RequestsController : ControllerBase {
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<IEnumerable<EquipmentRequestResponse>>> GetAllRequests() {
         var requests = await _db.EquipmentRequests.AsNoTracking()
+            .OrderByDescending(x => x.RequestedAtUtc)
             .Select(ResponseFromEntity)
             .ToListAsync();
 
