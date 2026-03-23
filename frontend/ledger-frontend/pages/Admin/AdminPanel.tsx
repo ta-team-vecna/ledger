@@ -1,566 +1,391 @@
-import { useState, useEffect, useCallback, type ReactNode } from 'react';
-import Topbar from "../../components/topBar/topBar";
-import AdminSidebar from '../../components/adminSideBar/adminSideBar';
-import { apiFetch, API_BASE } from '../../src/utils/apiFetch';
-import { Divider } from '@mui/material';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Icon from '@mui/material/Icon';
-import styles from './AdminPanel.module.css';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import Button from '@mui/material/Button';
-import ButtonGroup from '@mui/material/ButtonGroup';
-import Chip from '@mui/material/Chip';
 import Avatar from '@mui/material/Avatar';
-import Tooltip from '@mui/material/Tooltip';
-import { useAdminGuard } from '../../hooks/useAdminGuard'; 
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import IconButton from '@mui/material/IconButton';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import MenuIcon from '@mui/icons-material/Menu';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import Sidebar from '../../components/sideBar/sideBar';
+import type { NavItem } from '../../components/sideBar/sideBar';
+import { useAuth } from '../../src/context/useAuth';
+import { useAdminGuard } from '../../hooks/useAdminGuard';
+import { apiFetch, API_BASE } from '../../src/utils/apiFetch';
+import styles from './AdminPanel.module.css';
 
-interface TransformedRequest {
-    id: string; 
-  user: string;
-  role: string;
-  item: string;
-  quantity: number;
-  duration: string;
-  timeAgo: string;
-    status: string;
-  urgent: boolean;
-}
-
-interface RecentRequestApi {
+interface EquipmentData {
   id: string;
-  userFullName: string;
-  userRole?: string;
-  equipmentName: string;
-  requestedFromUtc: string;
-  requestedToUtc: string;
-  requestedAtUtc: string;
+  name: string;
+  type: string;
   status: string;
 }
 
+interface UserData {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+}
+
+interface RequestData {
+  id: string;
+  userFullName: string;
+  equipmentName: string;
+  status: string;
+  requestedAtUtc: string;
+  requestedFromUtc: string;
+  requestedToUtc: string;
+  returnedAtUtc: string | null;
+  checkedOutAtUtc: string | null;
+  reviewedAtUtc: string | null;
+}
+
+interface ActionItem {
+  icon: string;
+  iconColor: string;
+  text: string;
+  timeAgo: string;
+  timestamp: number;
+}
+
+const adminNavItems: NavItem[] = [
+  { text: 'Main Panel', icon: 'dashboard', path: '/admin' },
+  { text: 'Requests', icon: 'description', path: '/admin/requests', hasChevron: true },
+  { text: 'Latest Actions', icon: 'history', path: '/admin', hasChevron: true },
+  { text: 'Users', icon: 'people', path: '/admin/users', hasChevron: true },
+  { text: 'Items', icon: 'inventory_2', path: '/admin/inventory', hasChevron: true },
+  { text: 'Reports', icon: 'bar_chart', path: '/admin', hasChevron: true },
+];
+
 const AdminPanel = () => {
-    const { loading: authLoading } = useAdminGuard();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [totalItems, setTotalItems] = useState<number | null>(null);
-  const [users, setUsers] = useState<Record<string, unknown>[]>([])
-   const [recentRequests, setRecentRequests] = useState<TransformedRequest[]>([]);
-  const [requestFilter, setRequestFilter] = useState('all');
-  const [requestLimit, setRequestLimit] = useState(10);
-  const [actionFilter, setActionFilter] = useState('all');
-  const [actionLimit, setActionLimit] = useState(10);
+  const { loading: authLoading } = useAdminGuard();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const isMobile = useMediaQuery('(max-width: 768px)');
+
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [adminCount, setAdminCount] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
+  const [categories, setCategories] = useState(0);
+  const [pendingRequests, setPendingRequests] = useState(0);
+  const [overdueItems, setOverdueItems] = useState(0);
+  const [recentRequests, setRecentRequests] = useState<RequestData[]>([]);
+  const [latestActions, setLatestActions] = useState<ActionItem[]>([]);
+
+  const formatTimeAgo = useCallback((dateStr: string) => {
+    const minutes = Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60));
+    if (minutes < 60) return `${minutes} min ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+    const days = Math.floor(hours / 24);
+    return `${days} day${days !== 1 ? 's' : ''} ago`;
+  }, []);
+
+  const buildActions = useCallback((requests: RequestData[]) => {
+    const actions: ActionItem[] = [];
+
+    requests.forEach(req => {
+      if (req.returnedAtUtc) {
+        actions.push({
+          icon: 'check_circle',
+          iconColor: '#16a34a',
+          text: `${req.equipmentName} returned from ${req.userFullName}`,
+          timeAgo: formatTimeAgo(req.returnedAtUtc),
+          timestamp: new Date(req.returnedAtUtc).getTime(),
+        });
+      }
+
+      if (req.status.toLowerCase() === 'overdue') {
+        actions.push({
+          icon: 'error',
+          iconColor: '#dc2626',
+          text: `OVERDUE: ${req.equipmentName} due from ${req.userFullName}`,
+          timeAgo: formatTimeAgo(req.requestedToUtc),
+          timestamp: new Date(req.requestedToUtc).getTime(),
+        });
+      }
+
+      if (req.checkedOutAtUtc && req.status.toLowerCase() === 'checkedout') {
+        actions.push({
+          icon: 'shopping_cart',
+          iconColor: '#2563eb',
+          text: `${req.equipmentName} checked out by ${req.userFullName}`,
+          timeAgo: formatTimeAgo(req.checkedOutAtUtc),
+          timestamp: new Date(req.checkedOutAtUtc).getTime(),
+        });
+      }
+    });
+
+    return actions.sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
+  }, [formatTimeAgo]);
 
   useEffect(() => {
     apiFetch(`${API_BASE}/api/users`)
       .then(res => res.ok ? res.json() : Promise.reject())
-      .then(data => setUsers(data))
-      .catch(() => console.error('Failed to fetch users'));
+      .then((data: UserData[]) => {
+        setTotalUsers(data.length);
+        setAdminCount(data.filter(u => u.role === 'Admin').length);
+      })
+      .catch(() => {});
 
     apiFetch(`${API_BASE}/api/equipment`)
       .then(res => res.ok ? res.json() : Promise.reject())
-      .then((data: unknown[]) => setTotalItems(data.length))
-      .catch(() => setTotalItems(null));
-  }, []);
+      .then((data: EquipmentData[]) => {
+        setTotalItems(data.length);
+        setCategories(new Set(data.map(e => e.type)).size);
+      })
+      .catch(() => {});
 
-  // Fetch recent requests
- const fetchRecentRequests = useCallback(async () => {
-  try {
-    const response = await apiFetch(`${API_BASE}/api/requests/all`);
-    if (!response.ok) return;
-    const data = await response.json();
+    apiFetch(`${API_BASE}/api/requests/all`)
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then((data: RequestData[]) => {
+        setPendingRequests(data.filter(r => r.status.toLowerCase() === 'pending').length);
+        setOverdueItems(data.filter(r => r.status.toLowerCase() === 'overdue').length);
+        setRecentRequests(data.slice(0, 5));
+        setLatestActions(buildActions(data));
+      })
+      .catch(() => {});
+  }, [buildActions]);
 
-    const transformed = (Array.isArray(data) ? data : Object.values(data)).map((req: RecentRequestApi) => ({
-      id: req.id,
-      user: req.userFullName,
-      role: req.userRole || 'User',
-      item: req.equipmentName,
-      quantity: 1,
-      duration: getDurationString(req.requestedFromUtc, req.requestedToUtc),
-      timeAgo: formatTimeAgo(req.requestedAtUtc),
-      status: req.status.toLowerCase(),
-      urgent: isUrgent(req)
-    }));
-
-    setRecentRequests(transformed);
-  } catch (error) {
-    console.error('Failed to fetch recent requests:', error);
-  }
-}, []);
-
-  useEffect(() => {
-    fetchRecentRequests();
-  }, [fetchRecentRequests]);
-
-  // Helper functions
-  const getDurationString = (from: string, to: string) => {
-    const days = Math.ceil((new Date(to).getTime() - new Date(from).getTime()) / (1000 * 60 * 60 * 24));
-    return `${days} day${days !== 1 ? 's' : ''}`;
+  const handleLogout = async () => {
+    setAnchorEl(null);
+    await logout();
+    navigate('/login');
   };
 
-  const formatTimeAgo = (date: string) => {
-    const minutes = Math.floor((new Date().getTime() - new Date(date).getTime()) / (1000 * 60));
-    if (minutes < 60) return `${minutes} min ago`;
-    if (minutes < 1440) return `${Math.floor(minutes / 60)} hour${Math.floor(minutes / 60) !== 1 ? 's' : ''} ago`;
-    return `${Math.floor(minutes / 1440)} day${Math.floor(minutes / 1440) !== 1 ? 's' : ''} ago`;
+  const getStatusClass = (status: string) => {
+    const s = status.toLowerCase();
+    if (s === 'pending') return styles.statusPending;
+    if (s === 'overdue') return styles.statusOverdue;
+    if (s === 'checkedout') return styles.statusBorrowed;
+    if (s === 'returned') return styles.statusReturned;
+    if (s === 'approved') return styles.statusApproved;
+    return '';
   };
 
-  const isUrgent = (req: RecentRequestApi) => {
-    if (req.status !== 'Pending') return false;
-    const hours = (new Date().getTime() - new Date(req.requestedAtUtc).getTime()) / (1000 * 60 * 60);
-    return hours > 48;
+  const getStatusLabel = (status: string) => {
+    if (status.toLowerCase() === 'checkedout') return 'BORROWED';
+    return status.toUpperCase();
   };
 
-  // Filter and limit the requests
-  const filteredRequests = recentRequests
-    .filter(req => requestFilter === 'all' || req.status === requestFilter)
-    .slice(0, requestLimit);
-
-const handleApproveRequest = async (requestId: string) => {
-  try {
-    const response = await apiFetch(`${API_BASE}/api/requests/${requestId}/approve`, {
-      method: 'PUT',
-    });
-    if (!response.ok) throw new Error('Failed to approve request');
-    await fetchRecentRequests();
-  } catch (error) {
-    console.error('Failed to approve request:', error);
-    alert('Failed to approve request');
-  }
-};
-
-const handleRejectRequest = async (requestId: string) => {
-  try {
-    const response = await apiFetch(`${API_BASE}/api/requests/${requestId}/reject`, {
-      method: 'PUT',
-    });
-    if (!response.ok) throw new Error('Failed to reject request');
-    await fetchRecentRequests();
-  } catch (error) {
-    console.error('Failed to reject request:', error);
-    alert('Failed to reject request');
-  }
-};
+  const userName = user ? `${user.firstName} ${user.lastName}` : '';
 
   if (authLoading) {
     return (
-      <>
-        <Topbar onMenuClick={() => setSidebarOpen(true)} />
-        <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className={styles.loadingContainer}>
-          <div>Verifying access...</div>
-        </div>
-      </>
+      <div className={styles.layout}>
+        <div className={styles.loadingContainer}>Verifying access...</div>
+      </div>
     );
   }
 
   return (
-    <>
-      <Topbar 
-        onMenuClick={() => setSidebarOpen(true)}
+    <div className={styles.layout}>
+      <Sidebar
+        title="Inventory System"
+        subtitle="Admin Panel"
+        navItems={adminNavItems}
+        userName={userName}
+        userEmail={user?.email || ''}
+        mobileOpen={mobileOpen}
+        onMobileToggle={setMobileOpen}
       />
-      
-      <AdminSidebar 
-        open={sidebarOpen} 
-        onClose={() => setSidebarOpen(false)} 
-      />
-      
-      <div style={{ 
-        flex: 1, 
-        padding: '20px',
-        marginTop: 'clamp(3vh, 8vw, 9vh)',
-        marginLeft: sidebarOpen ? '240px' : '0',
-        transition: 'margin-left 0.3s ease'
-      }}>
-        {/* 3x2 Grid Layout */}
-        <div className={styles.dashboardGrid}>
-          
-          {/* Row 1, Col 1: Quick Stats */}
-          <div className={styles.gridCell}>
-            <div className={styles.quickStats}>
-              <div className={styles.quickStatsHeading}>
-                <h2>QUICK STATISTICS</h2>
-              </div>
-              <Divider />
-              
-              <div className={styles.statsGrid}>
-                {/* Users Section */}
-                <div className={styles.statSection}>
-                  <h3>Users</h3>
-                  <Divider />
-                  <div className={styles.statItem}>
-                    <span className={styles.statLabel}>
-                      <Icon className={styles.statIcon}>people</Icon> Total Users:
-                    </span>
-                    <span className={styles.statValue}>{users.length}</span>
-                  </div>
-                  <div className={styles.statItem}>
-                    <span className={styles.statLabel}>
-                      <Icon className={styles.statIcon}>admin_panel_settings</Icon> Admins:
-                    </span>
-                    <span className={styles.statValue}> {users.filter(user => user.role === 'Admin').length}</span>
-                  </div>
-                  <div className={styles.statItem}>
-                    <span className={styles.statLabel}>
-                      <Icon className={styles.statIcon}>people</Icon> Online:
-                    </span>
-                    <span className={styles.statValue}>—</span>
-                  </div>
-                </div>
 
-                {/* Items Section */}
-                <div className={styles.statSection}>
-                  <h3>Items</h3>
-                  <Divider />
-                  <div className={styles.statItem}>
-                    <span className={styles.statLabel}>
-                      <Icon className={styles.statIcon}>category</Icon> Categories:
-                    </span>
-                    <span className={styles.statValue}>—</span>
-                  </div>
-                  <div className={styles.statItem}>
-                    <span className={styles.statLabel}>
-                      <Icon className={styles.statIcon}>inventory</Icon> Total Items:
-                    </span>
-                    <span className={styles.statValue}>{totalItems ?? "—"}</span>
-                  </div>
-                  <div className={styles.statItem}>
-                    <span className={styles.statLabel}>
-                      <Icon className={styles.statIcon}>inventory</Icon> Low Stock:
-                    </span>
-                    <span className={styles.statValue}>—</span>
-                  </div>
-                </div>
+      <div className={styles.mainContent}>
+        <div className={styles.header}>
+          {isMobile && (
+            <IconButton onClick={() => setMobileOpen(true)} sx={{ color: '#333' }}>
+              <MenuIcon />
+            </IconButton>
+          )}
+          <div className={styles.headerSpacer} />
+          <button className={styles.backBtn} onClick={() => navigate('/dashboard')}>
+            &larr; User Dashboard
+          </button>
+          <div
+            className={styles.userDropdown}
+            onClick={(e) => setAnchorEl(e.currentTarget)}
+          >
+            <Avatar className={styles.headerAvatar}>{userName.charAt(0)}</Avatar>
+            <span className={styles.headerUserName}>{userName}</span>
+            <KeyboardArrowDownIcon fontSize="small" />
+          </div>
+          <Menu
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={() => setAnchorEl(null)}
+          >
+            <MenuItem onClick={handleLogout}>Logout</MenuItem>
+          </Menu>
+        </div>
 
-                {/* System Status Section */}
-                <div className={styles.statSection}>
-                  <h3>System</h3>
-                  <Divider />
-                  <div className={styles.statItem}>
-                    <span className={styles.statLabel}>
-                      <AccessTimeIcon className={styles.statIcon} /> Uptime:
-                    </span>
-                    <span className={styles.statValue}>—</span>
-                  </div>
-                  <div className={styles.statItem}>
-                    <span className={styles.statLabel}>
-                      <Icon className={styles.statIcon}>check_circle</Icon> Status:
-                    </span>
-                    <span className={`${styles.statValue} ${styles.statusIndicator}`}>Operational</span>
-                  </div>
-                  <div className={styles.statItem}>
-                    <span className={styles.statLabel}>
-                      <Icon className={styles.statIcon}>inventory</Icon> Version:
-                    </span>
-                    <span className={styles.statValue}>1.00</span>
-                  </div>  
-                </div>
-              </div>
+        <div className={styles.pageTitle}>
+          <h1>Dashboard Overview</h1>
+        </div>
+
+        <div className={styles.statsRow}>
+          <div className={styles.adminStatCard}>
+            <div>
+              <span className={styles.adminStatLabel}>Total Users</span>
+              <span className={styles.adminStatNumber}>{totalUsers}</span>
+            </div>
+            <div className={`${styles.adminStatIconBox} ${styles.iconBlue}`}>
+              <Icon>people</Icon>
             </div>
           </div>
 
-          {/* Row 1, Col 2: Recent Requests */}
-          <div className={styles.gridCell}>
-            <div className={styles.quickStats}>
-              <div className={styles.quickStatsHeading}>
-                <h2>RECENT REQUESTS</h2>
-              </div>
-              <Divider />
-              
-              {/* Filter Controls */}
-              <div className={styles.filterControls}>
-                <ButtonGroup size="small" variant="outlined" className={styles.filterGroup}>
-                  <Button 
-                    variant={requestFilter === 'all' ? 'contained' : 'outlined'}
-                    onClick={() => setRequestFilter('all')}
-                  >
-                    All
-                  </Button>
-                  <Button 
-                    variant={requestFilter === 'pending' ? 'contained' : 'outlined'}
-                    onClick={() => setRequestFilter('pending')}
-                  >
-                    Pending
-                  </Button>
-                  <Button 
-                    variant={requestFilter === 'approved' ? 'contained' : 'outlined'}
-                    onClick={() => setRequestFilter('approved')}
-                  >
-                    Approved
-                  </Button>
-                  <Button 
-                    variant={requestFilter === 'rejected' ? 'contained' : 'outlined'}
-                    onClick={() => setRequestFilter('rejected')}
-                  >
-                    Rejected
-                  </Button>
-                  <Button 
-                    variant={requestFilter === 'overdue' ? 'contained' : 'outlined'}
-                    onClick={() => setRequestFilter('overdue')}
-                  >
-                    Overdue
-                  </Button>
-                </ButtonGroup>
-                
-                <div className={styles.limitSelector}>
-                  <span>Show:</span>
-                  <ButtonGroup size="small">
-                    <Button 
-                      variant={requestLimit === 10 ? 'contained' : 'outlined'}
-                      onClick={() => setRequestLimit(10)}
-                    >
-                      10
-                    </Button>
-                    <Button 
-                      variant={requestLimit === 25 ? 'contained' : 'outlined'}
-                      onClick={() => setRequestLimit(25)}
-                    >
-                      25
-                    </Button>
-                    <Button 
-                      variant={requestLimit === 50 ? 'contained' : 'outlined'}
-                      onClick={() => setRequestLimit(50)}
-                    >
-                      50
-                    </Button>
-                  </ButtonGroup>
-                </div>
-              </div>
-              
-              {/* Scrollable Requests List */}
-              <div className={styles.requestList}>
-                {filteredRequests.length === 0 ? (
-                  <div className={styles.emptyState}>No requests yet.</div>
-                ) : (
-                  filteredRequests.map((request, index) => (
-                    <div key={index} className={`${styles.requestItem} ${styles[request.status]}`}>
-                      <div className={styles.requestHeader}>
-                        <div className={styles.requestUser}>
-                          <Avatar className={styles.requestAvatar}>
-                            {request.user.charAt(0)}
-                          </Avatar>
-                          <div className={styles.userInfo}>
-                            <span className={styles.userName}>{request.user}</span>
-                            <span className={styles.userRole}>{request.role}</span>
+          <div className={styles.adminStatCard}>
+            <div>
+              <span className={styles.adminStatLabel}>Total Items</span>
+              <span className={styles.adminStatNumber}>{totalItems}</span>
+            </div>
+            <div className={`${styles.adminStatIconBox} ${styles.iconGreen}`}>
+              <Icon>inventory_2</Icon>
+            </div>
+          </div>
+
+          <div className={styles.adminStatCard}>
+            <div>
+              <span className={styles.adminStatLabel}>Pending Requests</span>
+              <span className={styles.adminStatNumber}>{pendingRequests}</span>
+            </div>
+            <div className={`${styles.adminStatIconBox} ${styles.iconOrange}`}>
+              <Icon>pending_actions</Icon>
+            </div>
+          </div>
+
+          <div className={styles.adminStatCard}>
+            <div>
+              <span className={styles.adminStatLabel}>Overdue Items</span>
+              <span className={`${styles.adminStatNumber} ${styles.overdueNumber}`}>{overdueItems}</span>
+            </div>
+            <div className={`${styles.adminStatIconBox} ${styles.iconRed}`}>
+              <Icon>warning</Icon>
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.twoColumnRow}>
+          <div className={styles.card}>
+            <div className={styles.cardHeader}>
+              <h2>Recent Requests</h2>
+              <button className={styles.viewAllBtn} onClick={() => navigate('/admin/requests')}>
+                View All &rarr;
+              </button>
+            </div>
+            <div className={styles.tableWrapper}>
+              <table className={styles.requestTable}>
+                <thead>
+                  <tr>
+                    <th>ITEM</th>
+                    <th>REQUESTED BY</th>
+                    <th>STATUS</th>
+                    <th>DATE</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentRequests.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className={styles.emptyState}>No requests yet.</td>
+                    </tr>
+                  ) : (
+                    recentRequests.map(req => (
+                      <tr key={req.id}>
+                        <td>
+                          <div className={styles.itemCell}>
+                            <Icon className={styles.itemIcon}>inventory_2</Icon>
+                            <span>{req.equipmentName}</span>
                           </div>
-                        </div>
-                        <Chip 
-                          label={request.timeAgo} 
-                          size="small" 
-                          className={styles.timeChip}
-                          variant="outlined"
-                        />
-                      </div>
-                      
-                      <div className={styles.requestDetails}>
-                        <div className={styles.requestItemInfo}>
-                          <Icon className={styles.requestItemIcon}>inventory_2</Icon>
-                          <span className={styles.requestItemName}>{request.item}</span>
-                          {request.quantity > 1 && (
-                            <Chip 
-                              label={`x${request.quantity}`} 
-                              size="small" 
-                              className={styles.quantityChip}
-                            />
-                          )}
-                        </div>
-                        <div className={styles.requestDuration}>
-                          <Icon className={styles.durationIcon}>schedule</Icon>
-                          <span>{request.duration}</span>
-                        </div>
-                      </div>
-                      
-                      <div className={styles.requestFooter}>
-                        <div className={styles.requestStatus}>
-                          <span className={`${styles.statusBadge} ${styles[request.status]}`}>
-                            {request.status}
+                        </td>
+                        <td>{req.userFullName}</td>
+                        <td>
+                          <span className={`${styles.statusBadge} ${getStatusClass(req.status)}`}>
+                            <span className={styles.statusDot} />
+                            {getStatusLabel(req.status)}
                           </span>
-                          {request.urgent && (
-                            <Tooltip title="Pending for over 48 hours">
-                              <span className={styles.urgentTag}> URGENT</span>
-                            </Tooltip>
-                          )}
-                        </div>
-                        
-                        <div className={styles.requestActions}>
-                         {request.status === 'pending' && (
-                          <>
-                            <Button 
-                              size="small" 
-                              variant="contained" 
-                              color="success"
-                              className={styles.approveBtn}
-                              startIcon={<Icon>check</Icon>}
-                              onClick={() => handleApproveRequest(request.id)}  
-                            >
-                              Approve
-                            </Button>
-                            <Button 
-                              size="small" 
-                              variant="outlined" 
-                              color="error"
-                              className={styles.denyBtn}
-                              startIcon={<Icon>close</Icon>}
-                              onClick={() => handleRejectRequest(request.id)}   
-                            >
-                              Deny
-                            </Button>
-                          </>
-                        )}
-                          {request.status === 'approved' && (
-                            <Button 
-                              size="small" 
-                              variant="text" 
-                              disabled
-                              className={styles.disabledBtn}
-                            >
-                              Already Approved
-                            </Button>
-                          )}
-                          {request.status === 'rejected' && (
-                            <Button 
-                              size="small" 
-                              variant="text" 
-                              disabled
-                              className={styles.disabledBtn}
-                            >
-                              Request Rejected
-                            </Button>
-                          )}
-                          {request.status === 'overdue' && (
-                            <Button 
-                              size="small" 
-                              variant="contained" 
-                              color="warning"
-                              startIcon={<Icon>priority_high</Icon>}
-                            >
-                              Review Now
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
+                        </td>
+                        <td>{formatTimeAgo(req.requestedAtUtc)}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
 
-          {/* Row 2, Col 1: Latest Actions */}
-          <div className={styles.gridCell}>
-            <div className={styles.quickStats}>
-              <div className={styles.quickStatsHeading}>
-                <h2>LATEST ACTIONS</h2>
-              </div>
-              <Divider />
-              
-              {/* Filter Controls */}
-              <div className={styles.filterControls}>
-                <ButtonGroup size="small" variant="outlined" className={styles.filterGroup}>
-                  <Button 
-                    variant={actionFilter === 'all' ? 'contained' : 'outlined'}
-                    onClick={() => setActionFilter('all')}
-                  >
-                    All
-                  </Button>
-                  <Button 
-                    variant={actionFilter === 'borrow' ? 'contained' : 'outlined'}
-                    onClick={() => setActionFilter('borrow')}
-                  >
-                    Borrow
-                  </Button>
-                  <Button 
-                    variant={actionFilter === 'return' ? 'contained' : 'outlined'}
-                    onClick={() => setActionFilter('return')}
-                  >
-                    Return
-                  </Button>
-                  <Button 
-                    variant={actionFilter === 'request' ? 'contained' : 'outlined'}
-                    onClick={() => setActionFilter('request')}
-                  >
-                    Requests
-                  </Button>
-                  <Button 
-                    variant={actionFilter === 'admin' ? 'contained' : 'outlined'}
-                    onClick={() => setActionFilter('admin')}
-                  >
-                    Admin
-                  </Button>
-                </ButtonGroup>
-                
-                <div className={styles.limitSelector}>
-                  <span>Show:</span>
-                  <ButtonGroup size="small">
-                    <Button 
-                      variant={actionLimit === 10 ? 'contained' : 'outlined'}
-                      onClick={() => setActionLimit(10)}
-                    >
-                      10
-                    </Button>
-                    <Button 
-                      variant={actionLimit === 25 ? 'contained' : 'outlined'}
-                      onClick={() => setActionLimit(25)}
-                    >
-                      25
-                    </Button>
-                    <Button 
-                      variant={actionLimit === 50 ? 'contained' : 'outlined'}
-                      onClick={() => setActionLimit(50)}
-                    >
-                      50
-                    </Button>
-                    <Button 
-                      variant={actionLimit === 100 ? 'contained' : 'outlined'}
-                      onClick={() => setActionLimit(100)}
-                    >
-                      100
-                    </Button>
-                  </ButtonGroup>
+          <div className={styles.card}>
+            <div className={styles.cardHeader}>
+              <h2>System Status</h2>
+            </div>
+            <div className={styles.systemStatusList}>
+              <div className={styles.statusRow}>
+                <div className={styles.statusRowLeft}>
+                  <Icon className={styles.statusRowIcon}>schedule</Icon>
+                  <span>Uptime</span>
                 </div>
+                <span className={styles.operationalBadge}>Operational</span>
               </div>
-              
-              {/* Scrollable Action List */}
-              <div className={styles.actionList}>
-                {generateActions(actionFilter, actionLimit).length === 0 && (
-                  <div className={styles.emptyState}>No actions yet.</div>
-                )}
-                {generateActions(actionFilter, actionLimit).map((action, index) => (
-                  <div key={index} className={`${styles.actionItem} ${styles[action.type]}`}>
-                    <div className={styles.actionIcon}>
-                      {action.icon}
-                    </div>
-                    <div className={styles.actionContent}>
-                      <span className={styles.actionText}>{action.text}</span>
-                      <Chip 
-                        label={action.timeAgo} 
-                        size="small" 
-                        className={styles.timeChip}
-                        variant="outlined"
-                      />
-                    </div>
-                    {action.urgent && <span className={styles.urgentBadge}>!</span>}
-                  </div>
-                ))}
+              <div className={styles.statusRow}>
+                <div className={styles.statusRowLeft}>
+                  <Icon className={styles.statusRowIcon}>language</Icon>
+                  <span>Version</span>
+                </div>
+                <span className={styles.statusRowValue}>v1.0.0</span>
+              </div>
+              <div className={styles.statusRow}>
+                <div className={styles.statusRowLeft}>
+                  <Icon className={styles.statusRowIcon}>category</Icon>
+                  <span>Categories</span>
+                </div>
+                <span className={styles.statusRowValue}>{categories}</span>
+              </div>
+              <div className={styles.statusRow}>
+                <div className={styles.statusRowLeft}>
+                  <Icon className={styles.statusRowIcon}>inventory_2</Icon>
+                  <span>Total Items</span>
+                </div>
+                <span className={styles.statusRowValue}>{totalItems}</span>
+              </div>
+              <div className={styles.statusRow}>
+                <div className={styles.statusRowLeft}>
+                  <Icon className={styles.statusRowIcon}>admin_panel_settings</Icon>
+                  <span>Admins</span>
+                </div>
+                <span className={styles.statusRowValue}>{adminCount}</span>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Empty grid cells for future content */}
-          <div className={styles.gridCell}></div>
-          <div className={styles.gridCell}></div>
-          <div className={styles.gridCell}></div>
+        <div className={styles.actionsSection}>
+          <div className={styles.card}>
+            <div className={styles.cardHeader}>
+              <h2>Latest Actions</h2>
+              <button className={styles.viewAllBtn}>View All &rarr;</button>
+            </div>
+            <div className={styles.actionsList}>
+              {latestActions.length === 0 ? (
+                <div className={styles.emptyState}>No recent actions.</div>
+              ) : (
+                latestActions.map((action, i) => (
+                  <div key={i} className={styles.actionItem}>
+                    <Icon style={{ color: action.iconColor, fontSize: 20 }}>{action.icon}</Icon>
+                    <span className={styles.actionText}>{action.text}</span>
+                    <span className={styles.actionTime}>{action.timeAgo}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
       </div>
-    </>
+    </div>
   );
-};
-
-// Place this before your component or in a separate file
-const generateActions = (filter: string, limit: number) => {
-  const allActions: Array<{ type: string; icon: ReactNode; text: string; timeAgo: string; urgent: boolean }> = [];
-
-  // Filter actions
-  const filtered = filter === 'all' ? allActions : allActions.filter(a => a.type === filter);
-  
-  // Apply limit and return
-  return filtered.slice(0, limit);
 };
 
 export default AdminPanel;
