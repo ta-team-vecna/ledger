@@ -40,10 +40,10 @@ interface RequestModalProps {
   open: boolean;
   onClose: () => void;
   onRequestSubmitted: () => void;
-  userId?: string;
+  preselectedEquipmentId?: string;
 }
 
-const RequestModal = ({ open, onClose, onRequestSubmitted }: RequestModalProps) => {
+const RequestModal = ({ open, onClose, onRequestSubmitted, preselectedEquipmentId }: RequestModalProps) => {
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [filteredEquipment, setFilteredEquipment] = useState<Equipment[]>([]);
   const [filterMode, setFilterMode] = useState<'all' | 'open'>('all');
@@ -58,24 +58,26 @@ const RequestModal = ({ open, onClose, onRequestSubmitted }: RequestModalProps) 
     requestedToUtc: ''
   });
 
-  // Fetch available equipment on mount
+  // Fetch requestable equipment on open
   useEffect(() => {
     const fetchEquipment = async () => {
       if (!open) return;
-      
+
       setLoading(true);
       try {
         const response = await apiFetch(`${API_BASE}/api/equipment`);
-        
         if (!response.ok) throw new Error('Failed to fetch equipment');
-        
         const data = await response.json();
-        // Filter to only available equipment
-        const available = data.filter((item: Equipment) => 
-          item.status.toLowerCase() === 'available'
-        );
-        setEquipment(available);
-        setFilteredEquipment(available);
+        // Exclude permanently unavailable items; users can still request items with future reservations
+        const bookable = data.filter((item: Equipment) => {
+          const s = item.status.toLowerCase();
+          return s !== 'underrepair' && s !== 'retired';
+        });
+        setEquipment(bookable);
+        setFilteredEquipment(bookable);
+        if (preselectedEquipmentId) {
+          setFormData(prev => ({ ...prev, equipmentId: preselectedEquipmentId }));
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load equipment');
       } finally {
@@ -84,7 +86,7 @@ const RequestModal = ({ open, onClose, onRequestSubmitted }: RequestModalProps) 
     };
 
     fetchEquipment();
-  }, [open]);
+  }, [open, preselectedEquipmentId]);
 
   // Handle filter change
   const handleFilterChange = (_event: React.MouseEvent<HTMLElement>, newMode: 'all' | 'open' | null) => {
@@ -177,10 +179,7 @@ const RequestModal = ({ open, onClose, onRequestSubmitted }: RequestModalProps) 
   setError(null);
 
   try {
-    // Get the selected equipment to check if it needs approval
-    const selectedEquipment = equipment.find(e => e.id === formData.equipmentId);
-    
-    // Step 1: Create the request
+    // Create request; backend handles auto-approval for open items.
     const createResponse = await apiFetch(`${API_BASE}/api/requests`, {
       method: 'POST',
       headers: {
@@ -199,24 +198,14 @@ const RequestModal = ({ open, onClose, onRequestSubmitted }: RequestModalProps) 
         });
         setFieldErrors(backendErrors);
       }
-      throw new Error(createData.message || 'Failed to submit request');
+      throw new Error(createData.detail || createData.message || 'Failed to submit request');
     }
 
-    const requestId = createData.id;
-    
-    // Step 2: Auto-approve if the item doesn't require admin approval
-    if (selectedEquipment && !selectedEquipment.requiresAdminApproval) {
-      const approveResponse = await apiFetch(`${API_BASE}/api/requests/${requestId}/approve`, {
-        method: 'PUT'
-      });
-
-      if (!approveResponse.ok) {
-        console.warn('Auto-approve failed, but request was created');
-        alert('Request created but auto-approval failed. Please wait for admin approval.');
-      } else {
-        console.log('Request created and auto-approved!');
-        alert("Request was created, and automatically approved")
-      }
+    const createdStatus = String(createData.status ?? '').toLowerCase();
+    if (createdStatus === 'approved') {
+      alert('Request created and automatically approved.');
+    } else {
+      alert('Request submitted successfully. Awaiting admin approval.');
     }
 
     // Reset form and close

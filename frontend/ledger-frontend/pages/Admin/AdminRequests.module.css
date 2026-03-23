@@ -219,6 +219,23 @@
   gap: 10px;
 }
 
+.returnNotes {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  margin: 10px 0;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.returnNotes:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
 /* Scrollbar */
 .tableContainer::-webkit-scrollbar {
   width: 6px;

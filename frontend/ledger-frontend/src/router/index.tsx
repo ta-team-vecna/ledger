@@ -12,6 +12,7 @@ const AdminPanel = lazy(() => import('../../pages/Admin/AdminPanel'));
 const AdminUsers = lazy(() => import('../../pages/Admin/AdminUsers'));
 const AdminInventory = lazy(() => import('../../pages/Admin/AdminInventory'));
 const AdminRequests = lazy(() => import('../../pages/Admin/AdminRequests'));
+const UserInventory = lazy(() => import('../../pages/Inventory/UserInventory'));
 //const AdminSettings = lazy(() => import('../../pages/Admin/AdminSettings'))
 
 const withSuspense = (element: React.ReactNode) => (
@@ -77,6 +78,14 @@ export const router = createBrowserRouter([
       <AdminRoute>
         <AdminRequests/>
       </AdminRoute>
+    )
+  },
+  {
+    path: '/inventory',
+    element: withSuspense(
+      <ProtectedRoute>
+        <UserInventory />
+      </ProtectedRoute>
     )
   },
   {

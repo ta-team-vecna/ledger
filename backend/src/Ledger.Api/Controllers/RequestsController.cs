@@ -1,4 +1,4 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 using System.Security.Claims;
 using Ledger.Api.Data;
 using Ledger.Api.Domain;
@@ -66,6 +66,7 @@ public sealed class RequestsController : ControllerBase {
         var requests = await _db.EquipmentRequests
             .AsNoTracking()
             .Where(x => x.UserId == userId)
+            .OrderByDescending(x => x.RequestedAtUtc)
             .Select(ResponseFromEntity)
             .ToListAsync();
 
@@ -94,6 +95,7 @@ public sealed class RequestsController : ControllerBase {
         }
 
         var requests = await query
+            .OrderByDescending(x => x.RequestedAtUtc)
             .Select(ResponseFromEntity)
             .ToListAsync();
 
@@ -114,6 +116,7 @@ public sealed class RequestsController : ControllerBase {
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<IEnumerable<EquipmentRequestResponse>>> GetAllRequests() {
         var requests = await _db.EquipmentRequests.AsNoTracking()
+            .OrderByDescending(x => x.RequestedAtUtc)
             .Select(ResponseFromEntity)
             .ToListAsync();
 
@@ -121,7 +124,8 @@ public sealed class RequestsController : ControllerBase {
     }
 
     /// <summary>
-    /// Creates a new request to borrow equipment. If the equipment doesn't require admin approval, the request is marked as approved automatically.
+    /// Creates a new request to borrow equipment. If the equipment doesn't require admin approval,
+    /// the request is marked as approved automatically.
     /// </summary>
     /// <param name="request">The details of the equipment request.</param>
     /// <returns>The newly created equipment request.</returns>
@@ -187,7 +191,7 @@ public sealed class RequestsController : ControllerBase {
     /// Approves a pending equipment request and marks the equipment as reserved.
     /// </summary>
     /// <param name="id">The unique identifier of the request to approve.</param>
-    /// <param name="payload">The details of the rejection.</param>
+    /// <param name="payload">Optional review details including admin comment.</param>
     /// <returns>An empty success response.</returns>
     /// <response code="204">Successfully approved the request.</response>
     /// <response code="400">If the request is not in a pending state.</response>
@@ -238,7 +242,7 @@ public sealed class RequestsController : ControllerBase {
     /// Rejects a pending equipment request.
     /// </summary>
     /// <param name="id">The unique identifier of the request to reject.</param>
-    /// <param name="payload">The details of the rejection.</param>
+    /// <param name="payload">Optional review details including admin comment.</param>
     /// <returns>An empty success response.</returns>
     /// <response code="204">Successfully rejected the request.</response>
     /// <response code="400">If the request is not in a pending state.</response>
@@ -282,16 +286,16 @@ public sealed class RequestsController : ControllerBase {
     /// <summary>
     /// Processes the return of borrowed equipment.
     /// </summary>
-    /// <param name="id">The unique identifier of the equipment request.</param>
-    /// <param name="payload">The return details, including condition notes.</param>
+    /// <param name="id">The unique identifier of the request to return.</param>
+    /// <param name="payload">Return details including condition notes and repair flag.</param>
     /// <returns>An empty success response.</returns>
-    /// <response code="204">Successfully marked the equipment as returned.</response>
-    /// <response code="400">If the request is not in an approved or checked-out state.</response>
+    /// <response code="204">Successfully returned the equipment.</response>
+    /// <response code="400">If the request is not in a checked-out state.</response>
     /// <response code="404">If the request could not be found.</response>
     /// <response code="401">If the user is not authenticated.</response>
-    /// <response code="403">If the user does not have StrictAdmin privileges.</response>
+    /// <response code="403">If the user is not the request owner or an admin.</response>
     [HttpPut("{id:guid}/return")]
-    [Authorize(Policy = "StrictAdmin")]
+    [Authorize]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -306,6 +310,19 @@ public sealed class RequestsController : ControllerBase {
             return NotFound(ApiErrors.NotFound("Request was not found."));
         }
 
+        var currentUserIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (currentUserIdClaim is null) {
+            return Unauthorized(ApiErrors.Unauthorized);
+        }
+
+        var currentUserId = Guid.Parse(currentUserIdClaim);
+        var isAdmin = await _db.Users
+            .AnyAsync(x => x.Id == currentUserId && x.Role == UserRole.Admin);
+
+        if (request.UserId != currentUserId && !isAdmin) {
+            return Forbid();
+        }
+
         if (request.Status != RequestStatus.CheckedOut) {
             return BadRequest(ApiErrors.BadRequest("Invalid state", "Only checked out equipment can be returned."));
         }
@@ -313,7 +330,31 @@ public sealed class RequestsController : ControllerBase {
         request.ReturnedAtUtc = DateTime.UtcNow;
         request.ReturnConditionNotes = payload.ReturnConditionNotes;
         request.Status = RequestStatus.Returned;
-        request.Equipment.Status = payload.WantsRepair ? EquipmentStatus.UnderRepair : EquipmentStatus.Available;
+        if (payload.WantsRepair) {
+            request.Equipment.Status = EquipmentStatus.UnderRepair;
+        } else {
+            var hasOtherCheckedOut = await _db.EquipmentRequests
+                .AnyAsync(x => x.EquipmentId == request.EquipmentId
+                    && x.Id != request.Id
+                    && x.Status == RequestStatus.CheckedOut
+                    && x.ReturnedAtUtc == null);
+
+            if (hasOtherCheckedOut) {
+                request.Equipment.Status = EquipmentStatus.CheckedOut;
+            } else {
+                var now = DateTime.UtcNow;
+                var hasOtherApprovedReservation = await _db.EquipmentRequests
+                    .AnyAsync(x => x.EquipmentId == request.EquipmentId
+                        && x.Id != request.Id
+                        && x.Status == RequestStatus.Approved
+                        && x.ReturnedAtUtc == null
+                        && x.RequestedToUtc >= now);
+
+                request.Equipment.Status = hasOtherApprovedReservation
+                    ? EquipmentStatus.Reserved
+                    : EquipmentStatus.Available;
+            }
+        }
 
         // I: if time, query a free ai to check if notes indicate damage and mark for repair xD
 
@@ -325,21 +366,27 @@ public sealed class RequestsController : ControllerBase {
     /// <summary>
     /// Checks out the equipment from a request, marking it that it is in someone's hands now.
     /// </summary>
-    /// <param name="id">The unique identifier of the equipment request.</param>
+    /// <param name="id">The unique identifier of the request to check out.</param>
     /// <returns>An empty success response.</returns>
-    /// <response code="204">Successfully marked the equipment as checked out.</response>
-    /// <response code="400">If the request is not in an approved state.</response>
+    /// <response code="204">Successfully checked out the equipment.</response>
+    /// <response code="400">If the request is not approved or outside the reservation window.</response>
     /// <response code="404">If the request could not be found.</response>
     /// <response code="401">If the user is not authenticated.</response>
-    /// <response code="403">If the user does not have StrictAdmin privileges.</response>
+    /// <response code="403">If the user is not the request owner or an admin.</response>
     [HttpPut("{id:guid}/checkout")]
-    [Authorize(Policy = "StrictAdmin")]
+    [Authorize]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<ActionResult> Checkout(Guid id) {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userIdClaim is null) {
+            return Unauthorized(ApiErrors.Unauthorized);
+        }
+
+        var currentUserId = Guid.Parse(userIdClaim);
         var request = await _db.EquipmentRequests
             .Include(r => r.Equipment)
             .FirstOrDefaultAsync(x => x.Id == id);
@@ -348,12 +395,27 @@ public sealed class RequestsController : ControllerBase {
             return NotFound(ApiErrors.NotFound("Request was not found."));
         }
 
+        // Allow checkout by request owner or admin
+        var isAdmin = await _db.Users
+            .AnyAsync(x => x.Id == currentUserId && x.Role == UserRole.Admin);
+        if (request.UserId != currentUserId && !isAdmin) {
+            return Forbid();
+        }
+
         if (request.Status != RequestStatus.Approved) {
             return BadRequest(ApiErrors.BadRequest("Invalid state", "Only approved requests can be checked out."));
         }
 
-        if (request.Equipment.Status != EquipmentStatus.Reserved) {
-            return Conflict(ApiErrors.Conflict("Equipment is not currently reserved for checkout."));
+        // Only allow checkout within the reservation window (inclusive of both start and end day).
+        // Dates from the frontend may carry a timezone offset, so we add a full day of buffer
+        // to the end to ensure the entire last calendar day is valid.
+        var now = DateTime.UtcNow;
+        if (now < request.RequestedFromUtc.Date) {
+            return BadRequest(ApiErrors.BadRequest("Too early", "Equipment can only be checked out on or after the reservation start date."));
+        }
+
+        if (now >= request.RequestedToUtc.Date.AddDays(2)) {
+            return BadRequest(ApiErrors.BadRequest("Too late", "The reservation period has already ended."));
         }
 
         request.Status = RequestStatus.CheckedOut;
