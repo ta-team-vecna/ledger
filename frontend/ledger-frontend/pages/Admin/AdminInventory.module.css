@@ -1,10 +1,6 @@
 .inventoryContainer {
   flex: 1;
   padding: 20px;
-  margin-top: clamp(3vh, 8vw, 9vh);
-  margin-left: 0;
-  margin-right: 15px;
-  transition: margin-left 0.3s ease;
 }
 
 .controlsBar {

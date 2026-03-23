@@ -3,6 +3,7 @@ import { useNavigate, Link as RouterLink } from "react-router-dom";
 import styles from "./AuthPage.module.css";
 import { Button, TextField, Link, Alert } from "@mui/material";
 import { useAuth } from "../../src/context/useAuth";
+import ledgerDarkLogo from "../../src/assets/ledger-dark.svg";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -29,10 +30,8 @@ const LoginPage = () => {
 
   return (
     <>
-      <div className={styles.topBar}>
-        <p>SCHOOL INVENTORY MANAGEMENT SYSTEM</p>
-      </div>
       <div className={styles.loginCard}>
+        <img src={ledgerDarkLogo} alt="Ledger" className={styles.authLogo} />
         <h1>WELCOME BACK!</h1>
         <p>Please sign into your account</p>
         <form onSubmit={handleSubmit} style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -55,9 +54,6 @@ const LoginPage = () => {
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-          <Link component={RouterLink} to="/forgot-password" className={styles.customLink} id="forgot-password-link">
-            Forgot password?
-          </Link>
           <Button
             variant="contained"
             className={styles.customButton}

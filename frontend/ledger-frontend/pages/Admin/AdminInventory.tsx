@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import Topbar from "../../components/topBar/topBar";
-import AdminSidebar from "../../components/adminSideBar/adminSideBar";
+import PageLayout from '../../components/PageLayout/PageLayout';
 import Icon from '@mui/material/Icon';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
@@ -49,7 +48,6 @@ const AdminInventory = () => {
   const { loading: authLoading } = useAdminGuard();
   
   // UI State
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -288,7 +286,19 @@ const getDisplayStatus = (item: Equipment): string => {
       const failed = results.filter(r => !r.ok);
       
       if (failed.length > 0) {
-        alert(`${failed.length} items could not be deleted`);
+        const reasons = await Promise.all(
+          failed.map(async response => {
+            try {
+              const payload = await response.json();
+              return payload?.detail ?? payload?.title ?? `HTTP ${response.status}`;
+            } catch {
+              return `HTTP ${response.status}`;
+            }
+          })
+        );
+
+        const uniqueReasons = Array.from(new Set(reasons));
+        alert(`${failed.length} items could not be deleted.\n${uniqueReasons.join('\n')}`);
       }
       
       await fetchData();
@@ -355,23 +365,15 @@ const getDisplayStatus = (item: Equipment): string => {
 
   if (authLoading || loading) {
     return (
-      <>
-        <Topbar onMenuClick={() => setSidebarOpen(true)} />
-        <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <PageLayout type="admin">
         <div className={styles.loadingContainer}>Loading...</div>
-      </>
+      </PageLayout>
     );
   }
 
   return (
-    <>
-      <Topbar onMenuClick={() => setSidebarOpen(true)} />
-      <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      <div className={styles.inventoryContainer} style={{ 
-        marginLeft: sidebarOpen ? '240px' : '0',
-        transition: 'margin-left 0.3s ease'
-      }}>
+    <PageLayout type="admin">
+      <div className={styles.inventoryContainer}>
         {/* Controls Bar */}
         <div className={styles.controlsBar}>
           <div className={styles.controlsLeft}>
@@ -601,7 +603,7 @@ const getDisplayStatus = (item: Equipment): string => {
           </Button>
         </DialogActions>
       </Dialog>
-    </>
+    </PageLayout>
   );
 };
 

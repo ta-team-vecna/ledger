@@ -241,20 +241,32 @@ public sealed class AuthController : ControllerBase {
     [Authorize]
     [ProducesResponseType(typeof(CurrentUserResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public ActionResult<CurrentUserResponse> Me() {
-        var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-        var email = User.FindFirst(ClaimTypes.Email)!.Value;
-        var fullName = User.FindFirst(ClaimTypes.Name)?.Value ?? "";
-        var role = User.FindFirst(ClaimTypes.Role)!.Value;
+    public async Task<ActionResult<CurrentUserResponse>> Me() {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                          ?? User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
 
-        var parts = fullName.Split(' ', 2, StringSplitOptions.TrimEntries);
-        var firstName = parts.Length > 0 ? parts[0] : "";
-        var lastName = parts.Length > 1 ? parts[1] : "";
+        if (!Guid.TryParse(userIdClaim, out var userId)) {
+            return Unauthorized();
+        }
+
+        var user = await _db.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == userId);
+
+        if (user is null) {
+            return Unauthorized();
+        }
+
+        var email = User.FindFirst(ClaimTypes.Email)?.Value
+                    ?? User.FindFirst(JwtRegisteredClaimNames.Email)?.Value
+                    ?? user.Email;
+        var role = User.FindFirst(ClaimTypes.Role)?.Value
+                   ?? user.Role.ToString();
 
         return Ok(new CurrentUserResponse(
-            userId,
-            firstName,
-            lastName,
+            user.Id,
+            user.FirstName,
+            user.LastName,
             email,
             role
         ));

@@ -2,10 +2,6 @@
 .container {
   flex: 1;
   padding: 20px;
-  margin-top: clamp(3vh, 8vw, 9vh);
-  margin-left: 0;
-  margin-right: 15px;
-  transition: margin-left 0.3s ease;
 }
 
 .loadingContainer {
@@ -16,29 +12,18 @@
   color: #666;
 }
 
-.header h1 {
-  color: var(--accent-color);
-  margin-bottom: 20px;
-}
-
-.filterBar {
+.header {
   display: flex;
-  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 20px;
   flex-wrap: wrap;
+  gap: 12px;
 }
 
-.filterButton {
-  min-width: 100px !important;
-}
-
-.searchBar {
-  margin-bottom: 20px;
-}
-
-.searchIcon {
-  font-size: 18px !important;
-  color: var(--hover-color);
+.header h1 {
+  color: var(--accent-color);
+  margin: 0;
 }
 
 .tableContainer {
@@ -203,6 +188,7 @@
   font-size: 14px;
   margin: 10px 0;
   resize: vertical;
+  box-sizing: border-box;
 }
 
 .returnNotes:focus {

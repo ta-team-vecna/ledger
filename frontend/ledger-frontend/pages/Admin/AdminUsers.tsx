@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import Topbar from "../../components/topBar/topBar";
-import AdminSidebar from "../../components/adminSideBar/adminSideBar";
+import PageLayout from '../../components/PageLayout/PageLayout';
 import AddUserModal from '../../components/Admin/addUserModal';
 import Icon from '@mui/material/Icon';
 import Button from '@mui/material/Button';
@@ -42,7 +41,6 @@ interface UserResponse {
 
 const AdminUsers = () => {
   const { loading: authLoading } = useAdminGuard();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -108,13 +106,11 @@ const AdminUsers = () => {
 
   if (authLoading) {
     return (
-      <>
-        <Topbar onMenuClick={() => setSidebarOpen(true)} />
-        <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <PageLayout type="admin">
         <div className={styles.loadingContainer}>
           <div>Verifying access...</div>
         </div>
-      </>
+      </PageLayout>
     );
   }
 
@@ -223,13 +219,11 @@ const AdminUsers = () => {
 
   if (loading) {
     return (
-      <>
-        <Topbar onMenuClick={() => setSidebarOpen(true)} />
-        <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <PageLayout type="admin">
         <div className={styles.loadingContainer}>
           <div>Loading users...</div>
         </div>
-      </>
+      </PageLayout>
     );
   }
 
@@ -301,14 +295,8 @@ const AdminUsers = () => {
 
 
   return (
-    <>
-      <Topbar onMenuClick={() => setSidebarOpen(true)} />
-      <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      <div className={styles.usersContainer} style={{ 
-        marginLeft: sidebarOpen ? '240px' : '0',
-        transition: 'margin-left 0.3s ease'
-      }}>
+    <PageLayout type="admin">
+      <div className={styles.usersContainer}>
         {/* Controls Bar */}
         <div className={styles.controlsBar}>
           <div className={styles.controlsLeft}>
@@ -501,7 +489,7 @@ const AdminUsers = () => {
     </Button>
   </DialogActions>
 </Dialog>
-    </>
+    </PageLayout>
   );
 };
 

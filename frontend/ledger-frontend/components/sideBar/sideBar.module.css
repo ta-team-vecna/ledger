@@ -1,0 +1,132 @@
+.sidebar {
+  width: 260px;
+  height: 100vh;
+  background-color: #1e2a3a;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1100;
+  overflow-y: auto;
+}
+
+.logoSection {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px;
+}
+
+.logoImage {
+  width: 100%;
+  max-width: 170px;
+  height: auto;
+  display: block;
+}
+
+.nav {
+  flex: 1;
+  padding: 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 20px;
+  color: rgba(255, 255, 255, 0.75);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  transition: all 0.2s ease;
+}
+
+.navItem:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+
+.navItem.active {
+  background-color: #2563eb;
+  color: white;
+  margin: 0 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+}
+
+.navIcon {
+  font-size: 22px !important;
+}
+
+.chevron {
+  margin-left: auto;
+  font-size: 18px !important;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.userSection {
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.userCard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.userAvatar {
+  width: 40px !important;
+  height: 40px !important;
+  background-color: #4a5568 !important;
+  font-size: 16px !important;
+}
+
+.userInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.userName {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.userEmail {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.accountSettings {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  margin-top: 12px;
+  padding: 8px 0;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.accountSettings:hover {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.accountSettingsIcon {
+  font-size: 18px !important;
+}

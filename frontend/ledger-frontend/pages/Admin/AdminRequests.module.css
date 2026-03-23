@@ -2,10 +2,6 @@
 .container {
   flex: 1;
   padding: 20px;
-  margin-top: clamp(3vh, 8vw, 9vh);
-  margin-left: 0;
-  margin-right: 15px;
-  transition: margin-left 0.3s ease;
 }
 
 .loadingContainer {
@@ -217,6 +213,23 @@
 .dialogActions {
   padding: 16px 24px !important;
   gap: 10px;
+}
+
+.returnNotes {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  margin: 10px 0;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.returnNotes:focus {
+  outline: none;
+  border-color: var(--accent-color);
 }
 
 /* Scrollbar */

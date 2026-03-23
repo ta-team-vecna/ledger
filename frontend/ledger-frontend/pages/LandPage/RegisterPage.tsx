@@ -3,6 +3,7 @@ import { useNavigate, Link as RouterLink } from "react-router-dom";
 import styles from "./AuthPage.module.css";
 import { Button, TextField, Link, Alert } from "@mui/material";
 import { useAuth } from "../../src/context/useAuth";
+import ledgerDarkLogo from "../../src/assets/ledger-dark.svg";
 
 const RegisterPage = () => {
   const [firstName, setFirstName] = useState("");
@@ -45,10 +46,8 @@ const RegisterPage = () => {
 
   return (
     <>
-      <div className={styles.topBar}>
-        <p>SCHOOL INVENTORY MANAGEMENT SYSTEM</p>
-      </div>
-      <div className={styles.loginCard} style={{ height: "auto", paddingTop: "24px", paddingBottom: "24px" }}>
+      <div className={`${styles.loginCard} ${styles.registerCard}`}>
+        <img src={ledgerDarkLogo} alt="Ledger" className={styles.authLogo} />
         <h1>CREATE ACCOUNT</h1>
         <p>Fill in the details to register</p>
         <form onSubmit={handleSubmit} style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>

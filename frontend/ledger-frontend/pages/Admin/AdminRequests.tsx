@@ -1,22 +1,27 @@
 import { useState, useEffect } from 'react';
-import Topbar from "../../components/topBar/topBar";
-import AdminSidebar from "../../components/adminSideBar/adminSideBar";
+import PageLayout from '../../components/PageLayout/PageLayout';
 import Icon from '@mui/material/Icon';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 import Chip from '@mui/material/Chip';
 import Avatar from '@mui/material/Avatar';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Checkbox from '@mui/material/Checkbox';
+import TextareaAutosize from '@mui/material/TextareaAutosize';
 import styles from './AdminRequests.module.css';
-import { useAdminGuard } from '../../hooks/useAdminGuard';      
+import { useAdminGuard } from '../../hooks/useAdminGuard';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';    
+import DialogActions from '@mui/material/DialogActions';
 import Tooltip from '@mui/material/Tooltip';
 import RequestModal from "../../components/modals/RequestModal"
 import { apiFetch, API_BASE } from '../../src/utils/apiFetch';
-
 
 interface EquipmentRequest {
   id: string;
@@ -25,7 +30,7 @@ interface EquipmentRequest {
   equipmentId: string;
   equipmentName: string;
   equipmentSerialNumber: string;
-  status: string; // Backend sends: 'Pending', 'Approved', 'Rejected', 'Returned'
+  status: string;
   requestedAtUtc: string;
   requestedFromUtc: string;
   requestedToUtc: string;
@@ -36,9 +41,18 @@ interface EquipmentRequest {
   returnConditionNotes: string | null;
 }
 
+const STATUS_OPTIONS: { value: string; label: string; color: string; icon: string }[] = [
+  { value: 'Pending',    label: 'Pending',     color: '#ff9800', icon: 'hourglass_empty' },
+  { value: 'Approved',   label: 'Approved',    color: '#4caf50', icon: 'check_circle' },
+  { value: 'CheckedOut', label: 'Checked Out', color: '#1976d2', icon: 'sync_alt' },
+  { value: 'Returned',   label: 'Returned',    color: '#9c27b0', icon: 'assignment_return' },
+  { value: 'Rejected',   label: 'Rejected',    color: '#f44336', icon: 'cancel' },
+  { value: 'Overdue',    label: 'Overdue',     color: '#ff9800', icon: 'warning' },
+  { value: 'Cancelled',  label: 'Cancelled',   color: '#9e9e9e', icon: 'block' },
+];
+
 const AdminRequests = () => {
   const { loading: authLoading } = useAdminGuard();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [requests, setRequests] = useState<EquipmentRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -47,14 +61,14 @@ const AdminRequests = () => {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [requestModalOpen, setRequestModalOpen] = useState(false);
+  const [returnDialogOpen, setReturnDialogOpen] = useState(false);
+  const [returnNotes, setReturnNotes] = useState('');
+  const [wantsRepair, setWantsRepair] = useState(false);
 
-  // Fetch requests
   const fetchRequests = async () => {
     try {
       const response = await apiFetch(`${API_BASE}/api/requests/all`);
       const data = await response.json();
-      
-      // Handle both array and object-with-keys responses
       const requestsArray = Array.isArray(data) ? data : Object.values(data);
       setRequests(requestsArray as EquipmentRequest[]);
     } catch (error) {
@@ -64,33 +78,40 @@ const AdminRequests = () => {
     }
   };
 
-  useEffect(() => {
-    fetchRequests();
-  }, []);
+  useEffect(() => { fetchRequests(); }, []);
 
-  // Status display mappings (backend sends these exact strings)
-  const statusConfig: Record<string, { color: string; label: string }> = {
-    'Pending': { color: '#ff9800', label: 'Pending' },
-    'Approved': { color: '#4caf50', label: 'Approved' },
-    'Rejected': { color: '#f44336', label: 'Rejected' },
-    'Returned': { color: '#9c27b0', label: 'Returned' }
+  // Derive display status from backend status + dates (same logic as user's page)
+  const getStatusDisplay = (req: EquipmentRequest) => {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const end = new Date(req.requestedToUtc); end.setHours(0, 0, 0, 0);
+    const start = new Date(req.requestedFromUtc); start.setHours(0, 0, 0, 0);
+    const s = req.status.replace(/\s/g, '').toLowerCase();
+
+    if (s === 'returned')  return { text: 'Returned',    color: '#9c27b0', key: 'Returned' };
+    if (s === 'rejected')  return { text: 'Rejected',    color: '#f44336', key: 'Rejected' };
+    if (s === 'pending')   return { text: 'Pending',     color: '#ff9800', key: 'Pending' };
+    if (s === 'cancelled') return { text: 'Cancelled',   color: '#9e9e9e', key: 'Cancelled' };
+    if (s === 'overdue')   return { text: 'Overdue',     color: '#ff9800', key: 'Overdue' };
+
+    if (s === 'checkedout') {
+      if (today > end) return { text: 'Overdue', color: '#ff9800', key: 'Overdue' };
+      return { text: 'Checked Out', color: '#1976d2', key: 'CheckedOut' };
+    }
+
+    if (s === 'approved') {
+      if (today > end) return { text: 'Overdue', color: '#ff9800', key: 'Overdue' };
+      if (today < start) return { text: 'Reserved', color: '#ffc107', key: 'Approved' };
+      return { text: 'Approved', color: '#4caf50', key: 'Approved' };
+    }
+
+    return { text: s, color: '#999', key: s };
   };
-
-  const getStatusColor = (status: string) => {
-    return statusConfig[status]?.color || '#999';
-  };
-
-
 
   const handleApprove = async (requestId: string) => {
     setActionLoading(true);
     try {
-      const response = await apiFetch(`${API_BASE}/api/requests/${requestId}/approve`, {
-        method: 'PUT'
-      });
-
+      const response = await apiFetch(`${API_BASE}/api/requests/${requestId}/approve`, { method: 'PUT' });
       if (!response.ok) throw new Error('Failed to approve request');
-
       await fetchRequests();
       setDetailsOpen(false);
     } catch (error) {
@@ -104,12 +125,8 @@ const AdminRequests = () => {
   const handleDeny = async (requestId: string) => {
     setActionLoading(true);
     try {
-      const response = await apiFetch(`${API_BASE}/api/requests/${requestId}/reject`, {
-        method: 'PUT'
-      });
-
+      const response = await apiFetch(`${API_BASE}/api/requests/${requestId}/reject`, { method: 'PUT' });
       if (!response.ok) throw new Error('Failed to reject request');
-
       await fetchRequests();
       setDetailsOpen(false);
     } catch (error) {
@@ -120,87 +137,96 @@ const AdminRequests = () => {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const handleReturn = async () => {
+    if (!selectedRequest) return;
+    setActionLoading(true);
+    try {
+      const res = await apiFetch(`${API_BASE}/api/requests/${selectedRequest.id}/return`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ returnConditionNotes: returnNotes, wantsRepair })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail || 'Return failed');
+      }
+      await fetchRequests();
+      setReturnDialogOpen(false);
+      setDetailsOpen(false);
+      setReturnNotes('');
+      setWantsRepair(false);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to return item');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
-  // Filter and search
+  const canAdminReturn = (req: EquipmentRequest) => {
+    const s = req.status.replace(/\s/g, '');
+    return s === 'CheckedOut' && !req.returnedAtUtc;
+  };
+
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+
+  // Filter by derived status key + search
   const filteredRequests = requests.filter(req => {
-    const matchesSearch = searchTerm === '' || 
+    const matchesSearch = searchTerm === '' ||
       req.userFullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       req.equipmentName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       req.equipmentSerialNumber?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || req.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
+
+    if (!matchesSearch) return false;
+    if (statusFilter === 'all') return true;
+    return getStatusDisplay(req).key === statusFilter;
   });
-
-
-  // Normalize status for display
-  const getDisplayStatus = (status: string) => {
-    const statusMap: Record<string, string> = {
-      'Pending': 'Pending',
-      'Approved': 'Approved',
-      'Rejected': 'Rejected',
-      'CheckedOut': 'Checked Out',
-      'Checked Out': 'Checked Out',
-      'Returned': 'Returned'
-    };
-    return statusMap[status] || status;
-  };
-
-  const statusButtons = ['all', 'Pending', 'Approved', 'Rejected', 'Returned'];
-
 
   if (authLoading || loading) {
     return (
-      <>
-        <Topbar onMenuClick={() => setSidebarOpen(true)} />
-        <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className={styles.loadingContainer}>
-          <div>Loading requests...</div>
-        </div>
-      </>
+      <PageLayout type="admin">
+        <div className={styles.loadingContainer}><div>Loading requests...</div></div>
+      </PageLayout>
     );
   }
 
   return (
-    <>
-      <Topbar onMenuClick={() => setSidebarOpen(true)} /> 
-      <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      <div className={styles.container} style={{ 
-        marginLeft: sidebarOpen ? '240px' : '0',
-        transition: 'margin-left 0.3s ease'
-      }}>
-        {/* Header */}
+    <PageLayout type="admin">
+      <div className={styles.container}>
         <div className={styles.header}>
           <h1>Equipment Requests</h1>
         </div>
 
-        {/* Status Filter Buttons */}
+        {/* Filters bar */}
         <div className={styles.filterBar}>
-          {statusButtons.map((status) => (
-            <Button
-              key={status}
-              variant={statusFilter === status ? 'contained' : 'outlined'}
-              onClick={() => setStatusFilter(status)}
-              className={styles.filterButton}
-              style={statusFilter === status && status !== 'all' ? {
-                backgroundColor: getStatusColor(status),
-                borderColor: getStatusColor(status)
-              } : {}}
-            >
-              {status === 'all' ? 'All Requests' : getDisplayStatus(status)}
-            </Button>
-          ))}
+          <FormControl size="small" sx={{ minWidth: 160 }}>
+            <InputLabel>Status</InputLabel>
+            <Select value={statusFilter} label="Status" onChange={e => setStatusFilter(e.target.value)}>
+              <MenuItem value="all">All Statuses</MenuItem>
+              {STATUS_OPTIONS.map(opt => (
+                <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <TextField
+            size="small"
+            placeholder="Search user, equipment, serial..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Icon className={styles.searchIcon}>search</Icon>
+                </InputAdornment>
+              ),
+            }}
+            sx={{ flex: 1, minWidth: 200 }}
+          />
+
           <Button
             variant="contained"
             startIcon={<Icon>add</Icon>}
@@ -213,24 +239,6 @@ const AdminRequests = () => {
             open={requestModalOpen}
             onClose={() => setRequestModalOpen(false)}
             onRequestSubmitted={fetchRequests}
-          />
-        </div>
-
-        {/* Search Bar */}
-        <div className={styles.searchBar}>
-          <TextField
-            fullWidth
-            size="small"
-            placeholder="Search by user, equipment, or serial number..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Icon className={styles.searchIcon}>search</Icon>
-                </InputAdornment>
-              ),
-            }}
           />
         </div>
 
@@ -258,80 +266,77 @@ const AdminRequests = () => {
                   </td>
                 </tr>
               ) : (
-                filteredRequests.map((request) => (
-                  <tr key={request.id}>
-                    <td>
-                      <div className={styles.userCell}>
-                        <Avatar className={styles.userAvatar}>
-                          {request.userFullName?.charAt(0) || '?'}
-                        </Avatar>
-                        <span>{request.userFullName}</span>
-                      </div>
-                    </td>
-                    <td>{request.equipmentName}</td>
-                    <td>
-                      <code className={styles.serialNumber}>
-                        {request.equipmentSerialNumber}
-                      </code>
-                    </td>
-                    <td>
-                      <div className={styles.periodCell}>
-                        <div>
-                          <Icon className={styles.periodIcon}>event</Icon>
-                          {formatDate(request.requestedFromUtc).split(',')[0]}
+                filteredRequests.map(request => {
+                  const display = getStatusDisplay(request);
+                  return (
+                    <tr key={request.id}>
+                      <td>
+                        <div className={styles.userCell}>
+                          <Avatar className={styles.userAvatar}>
+                            {request.userFullName?.charAt(0) || '?'}
+                          </Avatar>
+                          <span>{request.userFullName}</span>
                         </div>
-                        <div>
-                          <Icon className={styles.periodIcon}>event</Icon>
-                          {formatDate(request.requestedToUtc).split(',')[0]}
+                      </td>
+                      <td>{request.equipmentName}</td>
+                      <td>
+                        <code className={styles.serialNumber}>{request.equipmentSerialNumber}</code>
+                      </td>
+                      <td>
+                        <div className={styles.periodCell}>
+                          <div>
+                            <Icon className={styles.periodIcon}>event</Icon>
+                            {formatDate(request.requestedFromUtc).split(',')[0]}
+                          </div>
+                          <div>
+                            <Icon className={styles.periodIcon}>event</Icon>
+                            {formatDate(request.requestedToUtc).split(',')[0]}
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td>
-                      <Chip
-                        label={getDisplayStatus(request.status)}
-                        size="small"
-                        className={styles.statusChip}
-                        style={{
-                          backgroundColor: `${getStatusColor(request.status)}20`,
-                          color: getStatusColor(request.status),
-                          borderColor: getStatusColor(request.status)
-                        }}
-                      />
-                    </td>
-                    <td>
-                      <Tooltip title={formatDate(request.requestedAtUtc)}>
-                        <span className={styles.requestedDate}>
-                          {new Date(request.requestedAtUtc).toLocaleDateString()}
-                        </span>
-                      </Tooltip>
-                    </td>
-                    <td>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        className={styles.viewButton}
-                        onClick={() => {
-                          setSelectedRequest(request);
-                          setDetailsOpen(true);
-                        }}
-                      >
-                        View
-                      </Button>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td>
+                        <Chip
+                          label={display.text}
+                          size="small"
+                          className={styles.statusChip}
+                          style={{
+                            backgroundColor: `${display.color}20`,
+                            color: display.color,
+                            borderColor: display.color
+                          }}
+                        />
+                      </td>
+                      <td>
+                        <Tooltip title={formatDate(request.requestedAtUtc)}>
+                          <span className={styles.requestedDate}>
+                            {new Date(request.requestedAtUtc).toLocaleDateString()}
+                          </span>
+                        </Tooltip>
+                      </td>
+                      <td>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          className={styles.viewButton}
+                          onClick={() => { setSelectedRequest(request); setDetailsOpen(true); }}
+                        >
+                          View
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
 
-        {/* Footer with counts */}
         <div className={styles.footer}>
-          <span>Showing {filteredRequests.length} requests</span>
+          <span>Showing {filteredRequests.length} of {requests.length} requests</span>
           {statusFilter !== 'all' && (
             <Chip
               size="small"
-              label={`Filter: ${getDisplayStatus(statusFilter)}`}
+              label={`Filter: ${STATUS_OPTIONS.find(o => o.value === statusFilter)?.label ?? statusFilter}`}
               onDelete={() => setStatusFilter('all')}
               className={styles.filterChip}
             />
@@ -340,107 +345,138 @@ const AdminRequests = () => {
       </div>
 
       {/* Request Details Dialog */}
-      <Dialog
-        open={detailsOpen}
-        onClose={() => !actionLoading && setDetailsOpen(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        {selectedRequest && (
-          <>
-            <DialogTitle className={styles.dialogTitle}>
-              <div>
-                <Icon className={styles.dialogIcon}>assignment</Icon>
-                Request Details
-              </div>
-              <Chip
-                label={getDisplayStatus(selectedRequest.status)}
-                size="small"
-                style={{
-                  backgroundColor: `${getStatusColor(selectedRequest.status)}20`,
-                  color: getStatusColor(selectedRequest.status),
-                  borderColor: getStatusColor(selectedRequest.status)
-                }}
-              />
-            </DialogTitle>
-            <DialogContent className={styles.dialogContent}>
-              <div className={styles.dialogGrid}>
-                <div className={styles.dialogSection}>
-                  <h3>User Information</h3>
-                  <p><strong>Name:</strong> {selectedRequest.userFullName}</p>
-                  <p><strong>User ID:</strong> {selectedRequest.userId}</p>
+      <Dialog open={detailsOpen} onClose={() => !actionLoading && setDetailsOpen(false)} maxWidth="md" fullWidth>
+        {selectedRequest && (() => {
+          const display = getStatusDisplay(selectedRequest);
+          return (
+            <>
+              <DialogTitle className={styles.dialogTitle}>
+                <div>
+                  <Icon className={styles.dialogIcon}>assignment</Icon>
+                  Request Details
                 </div>
-
-                <div className={styles.dialogSection}>
-                  <h3>Equipment Information</h3>
-                  <p><strong>Name:</strong> {selectedRequest.equipmentName}</p>
-                  <p><strong>Serial #:</strong> {selectedRequest.equipmentSerialNumber}</p>
-                </div>
-
-                <div className={styles.dialogSection}>
-                  <h3>Request Period</h3>
-                  <p><strong>From:</strong> {formatDate(selectedRequest.requestedFromUtc)}</p>
-                  <p><strong>To:</strong> {formatDate(selectedRequest.requestedToUtc)}</p>
-                </div>
-
-                <div className={styles.dialogSection}>
-                  <h3>Timeline</h3>
-                  <p><strong>Requested:</strong> {formatDate(selectedRequest.requestedAtUtc)}</p>
-                  {selectedRequest.reviewedAtUtc && (
-                    <p><strong>Reviewed:</strong> {formatDate(selectedRequest.reviewedAtUtc)}</p>
-                  )}
-                  {selectedRequest.checkedOutAtUtc && (
-                    <p><strong>Checked Out:</strong> {formatDate(selectedRequest.checkedOutAtUtc)}</p>
-                  )}
-                  {selectedRequest.returnedAtUtc && (
-                    <p><strong>Returned:</strong> {formatDate(selectedRequest.returnedAtUtc)}</p>
-                  )}
-                </div>
-
-                {selectedRequest.adminComment && (
-                  <div className={styles.dialogSectionFull}>
-                    <h3>Admin Comment</h3>
-                    <p className={styles.comment}>{selectedRequest.adminComment}</p>
+                <Chip
+                  label={display.text}
+                  size="small"
+                  style={{
+                    backgroundColor: `${display.color}20`,
+                    color: display.color,
+                    borderColor: display.color
+                  }}
+                />
+              </DialogTitle>
+              <DialogContent className={styles.dialogContent}>
+                <div className={styles.dialogGrid}>
+                  <div className={styles.dialogSection}>
+                    <h3>User Information</h3>
+                    <p><strong>Name:</strong> {selectedRequest.userFullName}</p>
+                    <p><strong>User ID:</strong> {selectedRequest.userId}</p>
                   </div>
-                )}
 
-                {selectedRequest.returnConditionNotes && (
-                  <div className={styles.dialogSectionFull}>
-                    <h3>Return Condition Notes</h3>
-                    <p className={styles.comment}>{selectedRequest.returnConditionNotes}</p>
+                  <div className={styles.dialogSection}>
+                    <h3>Equipment Information</h3>
+                    <p><strong>Name:</strong> {selectedRequest.equipmentName}</p>
+                    <p><strong>Serial #:</strong> {selectedRequest.equipmentSerialNumber}</p>
                   </div>
+
+                  <div className={styles.dialogSection}>
+                    <h3>Request Period</h3>
+                    <p><strong>From:</strong> {formatDate(selectedRequest.requestedFromUtc)}</p>
+                    <p><strong>To:</strong> {formatDate(selectedRequest.requestedToUtc)}</p>
+                  </div>
+
+                  <div className={styles.dialogSection}>
+                    <h3>Timeline</h3>
+                    <p><strong>Requested:</strong> {formatDate(selectedRequest.requestedAtUtc)}</p>
+                    {selectedRequest.reviewedAtUtc && (
+                      <p><strong>Reviewed:</strong> {formatDate(selectedRequest.reviewedAtUtc)}</p>
+                    )}
+                    {selectedRequest.checkedOutAtUtc && (
+                      <p><strong>Checked Out:</strong> {formatDate(selectedRequest.checkedOutAtUtc)}</p>
+                    )}
+                    {selectedRequest.returnedAtUtc && (
+                      <p><strong>Returned:</strong> {formatDate(selectedRequest.returnedAtUtc)}</p>
+                    )}
+                  </div>
+
+                  {selectedRequest.adminComment && (
+                    <div className={styles.dialogSectionFull}>
+                      <h3>Admin Comment</h3>
+                      <p className={styles.comment}>{selectedRequest.adminComment}</p>
+                    </div>
+                  )}
+
+                  {selectedRequest.returnConditionNotes && (
+                    <div className={styles.dialogSectionFull}>
+                      <h3>Return Condition Notes</h3>
+                      <p className={styles.comment}>{selectedRequest.returnConditionNotes}</p>
+                    </div>
+                  )}
+                </div>
+              </DialogContent>
+              <DialogActions className={styles.dialogActions}>
+                <Button onClick={() => setDetailsOpen(false)} disabled={actionLoading}>Close</Button>
+                {selectedRequest.status === 'Pending' && (
+                  <>
+                    <Button onClick={() => handleDeny(selectedRequest.id)} color="error" variant="outlined" disabled={actionLoading}>
+                      Reject
+                    </Button>
+                    <Button onClick={() => handleApprove(selectedRequest.id)} color="success" variant="contained" disabled={actionLoading}>
+                      Approve
+                    </Button>
+                  </>
                 )}
-              </div>
-            </DialogContent>
-            <DialogActions className={styles.dialogActions}>
-              <Button onClick={() => setDetailsOpen(false)} disabled={actionLoading}>
-                Close
-              </Button>
-              {selectedRequest.status.replace(/\s+/g, '') === 'Pending' && (
-                <>
+                {canAdminReturn(selectedRequest) && (
                   <Button
-                    onClick={() => handleDeny(selectedRequest.id)}
-                    color="error"
-                    variant="outlined"
-                    disabled={actionLoading}
-                  >
-                    Reject
-                  </Button>
-                  <Button
-                    onClick={() => handleApprove(selectedRequest.id)}
-                    color="success"
+                    onClick={() => setReturnDialogOpen(true)}
+                    color="primary"
                     variant="contained"
                     disabled={actionLoading}
+                    startIcon={<Icon>assignment_return</Icon>}
                   >
-                    Approve
+                    {display.key === 'Overdue' ? 'Force Return' : 'Return'}
                   </Button>
-                </>
-              )}
-            </DialogActions>
-          </>
-        )}
+                )}
+              </DialogActions>
+            </>
+          );
+        })()}
       </Dialog>
-    </>
+
+      {/* Return Dialog */}
+      <Dialog open={returnDialogOpen} onClose={() => !actionLoading && setReturnDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Icon sx={{ color: 'var(--hover-color)' }}>assignment_return</Icon>
+          Return Item
+        </DialogTitle>
+        <DialogContent>
+          <p style={{ margin: '0 0 12px', fontSize: 14, color: '#666' }}>
+            Describe the condition of the equipment upon return.
+          </p>
+          <TextareaAutosize
+            minRows={4}
+            className={styles.returnNotes}
+            value={returnNotes}
+            onChange={e => setReturnNotes(e.target.value)}
+            placeholder="e.g. Good condition, no visible damage..."
+            disabled={actionLoading}
+          />
+          <FormControlLabel
+            control={
+              <Checkbox checked={wantsRepair} onChange={e => setWantsRepair(e.target.checked)} disabled={actionLoading} color="warning" />
+            }
+            label="Equipment needs repair"
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+          <Button onClick={() => setReturnDialogOpen(false)} disabled={actionLoading}>Cancel</Button>
+          <Button onClick={handleReturn} color="primary" variant="contained" disabled={actionLoading} startIcon={<Icon>check</Icon>}>
+            Confirm Return
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </PageLayout>
   );
 };
 
