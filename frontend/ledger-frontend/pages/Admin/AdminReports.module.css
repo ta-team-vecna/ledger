@@ -285,3 +285,18 @@
     gap: 20px;
   }
 }
+
+/* Add to AdminReports.module.css */
+.exportButtons {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .exportButtons {
+    justify-content: center;
+  }
+}

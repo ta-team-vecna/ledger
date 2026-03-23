@@ -1,16 +1,19 @@
     // pages/Admin/AdminReports.tsx
     import { useState, useEffect } from 'react';
-    import Topbar from "../../components/topBar/topBar";
-    import AdminSidebar from "../../components/adminSideBar/adminSideBar";
     import Icon from '@mui/material/Icon';
     import Button from '@mui/material/Button';
     import ButtonGroup from '@mui/material/ButtonGroup';
     import Accordion from '@mui/material/Accordion';
+    import PageLayout from '../../components/PageLayout/PageLayout';
     import AccordionSummary from '@mui/material/AccordionSummary';
     import AccordionDetails from '@mui/material/AccordionDetails';
     import Alert from '@mui/material/Alert';
     import styles from './AdminReports.module.css';
     import { useAdminGuard } from '../../hooks/useAdminGuard';
+    import html2canvas from 'html2canvas';
+    import Papa from 'papaparse';
+  import jsPDF from 'jspdf';
+  import 'jspdf-autotable';
     import {
     BarChart,
     Bar,
@@ -33,6 +36,10 @@
     role: string;
     createdAtUtc: string;
     }
+
+    interface ExportData {
+  [key: string]: string | number;
+  } 
 
     interface Equipment {
     id: string;
@@ -288,20 +295,105 @@
         );
     };
 
-    if (authLoading) {
-        return (
-        <>
-            <Topbar onMenuClick={() => setSidebarOpen(true)} />
-            <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-            <div className={styles.loadingContainer}>Verifying access...</div>
-        </>
-        );
-    }
+
+// Add export functions inside the component
+const exportToCSV = (data: ExportData[], filename: string) => {
+  const csv = Papa.unparse(data);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', `${filename}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+const exportToPDF = async (elementId: string, title: string) => {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+  
+  const doc = new jsPDF();
+  const pageHeight = doc.internal.pageSize.height;
+  let yPos = 20;
+  
+  // Add title
+  doc.setFontSize(18);
+  doc.text(title, 14, yPos);
+  yPos += 15;
+  
+  // Add timestamp
+  doc.setFontSize(10);
+  doc.text(`Generated: ${new Date().toLocaleString()}`, 14, yPos);
+  yPos += 15;
+  
+  // Use html2canvas to capture the chart
+  const canvas = await html2canvas(element, {
+    scale: 2,
+    backgroundColor: '#ffffff'
+  });
+  const imgData = canvas.toDataURL('image/png');
+  const imgWidth = 180;
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+  
+  if (yPos + imgHeight > pageHeight - 20) {
+    doc.addPage();
+    yPos = 20;
+  }
+  
+  doc.addImage(imgData, 'PNG', 15, yPos, imgWidth, imgHeight);
+  doc.save(`${title.replace(/\s+/g, '_')}.pdf`);
+};
+
+// Add this state for export loading
+const [exporting, setExporting] = useState<'csv' | 'pdf' | null>(null);
+
+// Prepare data for export
+const prepareEquipmentExportData = () => {
+  return equipment.map(item => ({
+    'Item Name': item.name,
+    'Type': item.type,
+    'Serial Number': item.serialNumber,
+    'Status': item.status,
+    'Location': item.location,
+    'Condition': item.condition,
+    'Requires Approval': item.requiresAdminApproval ? 'Yes' : 'No'
+  }));
+};
+
+const prepareRequestsExportData = () => {
+  return requests.map(req => ({
+    'User': req.userFullName,
+    'Equipment': req.equipmentName,
+    'Serial Number': req.equipmentSerialNumber,
+    'Status': req.status,
+    'Requested Date': new Date(req.requestedAtUtc).toLocaleDateString(),
+    'From': new Date(req.requestedFromUtc).toLocaleDateString(),
+    'To': new Date(req.requestedToUtc).toLocaleDateString(),
+    'Reviewed': req.reviewedAtUtc ? new Date(req.reviewedAtUtc).toLocaleDateString() : 'Pending',
+    'Checked Out': req.checkedOutAtUtc ? new Date(req.checkedOutAtUtc).toLocaleDateString() : '-',
+    'Returned': req.returnedAtUtc ? new Date(req.returnedAtUtc).toLocaleDateString() : '-',
+    'Admin Comment': req.adminComment || '-',
+    'Return Notes': req.returnConditionNotes || '-'
+  }));
+};
+
+const prepareUsersExportData = () => {
+  return users.map(user => ({
+    'First Name': user.firstName,
+    'Last Name': user.lastName,
+    'Email': user.email,
+    'Role': user.role,
+    'Created': new Date(user.createdAtUtc).toLocaleDateString()
+  }));
+};
+
 
   return (
     <>
-      <Topbar onMenuClick={() => setSidebarOpen(true)} />
-      <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    <PageLayout type='admin'>
 
       <div className={styles.container} style={{ 
         marginLeft: sidebarOpen ? '240px' : '0',
@@ -311,6 +403,50 @@
           <h1>Reports & Charts</h1>
           <p className={styles.subheader}>Analytics and insights</p>
         </div>
+
+        <div className={styles.exportButtons}>
+  <Button
+    variant="outlined"
+    startIcon={<Icon>download</Icon>}
+    onClick={() => {
+      setExporting('csv');
+      const data = dataMode === 'equipment' 
+        ? prepareEquipmentExportData() 
+        : prepareRequestsExportData();
+      exportToCSV(data, `${dataMode}_report_${new Date().toISOString().split('T')[0]}`);
+      setExporting(null);
+    }}
+    disabled={exporting !== null}
+  >
+    {exporting === 'csv' ? 'Exporting...' : 'Export CSV'}
+  </Button>
+  
+  <Button
+    variant="outlined"
+    startIcon={<Icon>print</Icon>}
+    onClick={() => {
+      setExporting('pdf');
+      const elementId = dataMode === 'equipment' ? 'equipment-chart' : 'requests-chart';
+      const title = dataMode === 'equipment' ? 'Equipment Report' : 'Requests Report';
+      exportToPDF(elementId, title);
+      setExporting(null);
+    }}
+    disabled={exporting !== null}
+  >
+    {exporting === 'pdf' ? 'Preparing...' : 'Export PDF'}
+  </Button>
+  
+  <Button
+    variant="outlined"
+    startIcon={<Icon>people</Icon>}
+    onClick={() => {
+      const data = prepareUsersExportData();
+      exportToCSV(data, `users_report_${new Date().toISOString().split('T')[0]}`);
+    }}
+  >
+    Export Users CSV
+  </Button>
+</div>
 
         {renderError()}
 
@@ -337,6 +473,7 @@
           <>
             <div className={styles.doubleChartRow}>
               {/* Equipment Pie Chart */}
+              <div id="equipment-chart" className={styles.halfChartCard}>
               <div className={styles.halfChartCard}>
                 <h3>Equipment by Status</h3>
                 {equipmentChartData.length === 0 ? (
@@ -365,6 +502,7 @@
                     </PieChart>
                   </ResponsiveContainer>
                 )}
+              </div>
               </div>
 
               {/* Equipment Summary Stats */}
@@ -405,6 +543,7 @@
         {/* Requests Mode - Side by Side Layout */}
         {dataMode === 'requests' && (
           <>
+          <div id="requests-chart" className={styles.halfChartCard}>
             <div className={styles.doubleChartRow}>
               {/* Requests Pie Chart */}
               <div className={styles.halfChartCard}>
@@ -468,6 +607,7 @@
                   </div>
                 </div>
               </div>
+            </div>
             </div>
           </>
         )}
@@ -537,6 +677,7 @@
           </div>
         </div>
       </div>
+    </PageLayout>
     </>
   );
 };
