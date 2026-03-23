@@ -390,6 +390,107 @@ const prepareUsersExportData = () => {
   }));
 };
 
+// Export Users CSV (full user list)
+// Replace exportUsersCSV with this - exports the CHART data, not the user list
+const exportUsersCSV = () => {
+  // Transform chart data for CSV
+  const data = userChartData.map(item => ({
+    'Date': item.date,
+    'New Users': item.count
+  }));
+  
+  // Add summary row
+  data.push({
+    'Date': `TOTAL (${timeRange === 'week' ? '7 days' : timeRange === 'month' ? '30 days' : '12 months'})`,
+    'New Users': userChartData.reduce((sum, item) => sum + item.count, 0)
+  });
+  
+  exportToCSV(data, `user_registrations_${timeRange}_${new Date().toISOString().split('T')[0]}`);
+};
+
+// Optional: Add an export for the raw user list separately
+const exportUsersFullListCSV = () => {
+  const data = users.map(user => ({
+    'First Name': user.firstName,
+    'Last Name': user.lastName,
+    'Email': user.email,
+    'Role': user.role,
+    'Registration Date': new Date(user.createdAtUtc).toLocaleDateString()
+  }));
+  exportToCSV(data, `users_full_list_${new Date().toISOString().split('T')[0]}`);
+};
+
+
+// Export Users Section PDF (chart + stats)
+const exportUsersPDF = async () => {
+  const element = document.getElementById('user-registration-chart');
+  if (!element) {
+    alert('User registration section not found');
+    return;
+  }
+  
+  try {
+    const doc = new jsPDF();
+    let yPos = 20;
+    
+    // Title
+    doc.setFontSize(18);
+    doc.text('User Registration Report', 14, yPos);
+    yPos += 15;
+    
+    // Timestamp
+    doc.setFontSize(10);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, yPos);
+    yPos += 15;
+    
+    // Period info
+    doc.setFontSize(12);
+    let periodText = '';
+    switch (timeRange) {
+      case 'week': periodText = 'Last 7 Days'; break;
+      case 'month': periodText = 'Last 30 Days'; break;
+      case 'year': periodText = 'Last 12 Months'; break;
+    }
+    doc.text(`Period: ${periodText}`, 14, yPos);
+    yPos += 10;
+    
+    // Total users
+    doc.text(`Total Users: ${users.length}`, 14, yPos);
+    yPos += 7;
+    doc.text(`New Users in Period: ${userChartData.reduce((sum, item) => sum + item.count, 0)}`, 14, yPos);
+    yPos += 20;
+    
+    // Capture the chart
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      backgroundColor: '#ffffff'
+    });
+    const imgData = canvas.toDataURL('image/png');
+    const imgWidth = 180;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    
+    if (yPos + imgHeight > doc.internal.pageSize.height - 20) {
+      doc.addPage();
+      yPos = 20;
+    }
+    
+    doc.addImage(imgData, 'PNG', 15, yPos, imgWidth, imgHeight);
+    doc.save(`user_registration_${new Date().toISOString().split('T')[0]}.pdf`);
+  } catch (error) {
+    console.error('PDF export failed:', error);
+    alert('Failed to generate PDF');
+  }
+};
+
+const getExportLabel = () => {
+  if (exporting === 'csv') return 'Exporting...';
+  return `Export ${dataMode === 'equipment' ? 'Equipment' : 'Requests'} CSV`;
+};
+
+const getPDFLabel = () => {
+  if (exporting === 'pdf') return 'Preparing...';
+  return `Export ${dataMode === 'equipment' ? 'Equipment' : 'Requests'} PDF`;
+};
 
   return (
     <>
@@ -405,47 +506,37 @@ const prepareUsersExportData = () => {
         </div>
 
         <div className={styles.exportButtons}>
-  <Button
-    variant="outlined"
-    startIcon={<Icon>download</Icon>}
-    onClick={() => {
-      setExporting('csv');
-      const data = dataMode === 'equipment' 
-        ? prepareEquipmentExportData() 
-        : prepareRequestsExportData();
-      exportToCSV(data, `${dataMode}_report_${new Date().toISOString().split('T')[0]}`);
-      setExporting(null);
-    }}
-    disabled={exporting !== null}
-  >
-    {exporting === 'csv' ? 'Exporting...' : 'Export CSV'}
-  </Button>
-  
-  <Button
-    variant="outlined"
-    startIcon={<Icon>print</Icon>}
-    onClick={() => {
-      setExporting('pdf');
-      const elementId = dataMode === 'equipment' ? 'equipment-chart' : 'requests-chart';
-      const title = dataMode === 'equipment' ? 'Equipment Report' : 'Requests Report';
-      exportToPDF(elementId, title);
-      setExporting(null);
-    }}
-    disabled={exporting !== null}
-  >
-    {exporting === 'pdf' ? 'Preparing...' : 'Export PDF'}
-  </Button>
-  
-  <Button
-    variant="outlined"
-    startIcon={<Icon>people</Icon>}
-    onClick={() => {
-      const data = prepareUsersExportData();
-      exportToCSV(data, `users_report_${new Date().toISOString().split('T')[0]}`);
-    }}
-  >
-    Export Users CSV
-  </Button>
+      <Button
+  variant="outlined"
+  startIcon={<Icon>download</Icon>}
+  onClick={() => {
+    setExporting('csv');
+    const data = dataMode === 'equipment' 
+      ? prepareEquipmentExportData() 
+      : prepareRequestsExportData();
+    exportToCSV(data, `${dataMode}_report_${new Date().toISOString().split('T')[0]}`);
+    setExporting(null);
+  }}
+  disabled={exporting !== null}
+>
+  {getExportLabel()}
+</Button>
+
+<Button
+  variant="outlined"
+  startIcon={<Icon>print</Icon>}
+  onClick={() => {
+    setExporting('pdf');
+    const elementId = dataMode === 'equipment' ? 'equipment-chart' : 'requests-chart';
+    const title = dataMode === 'equipment' ? 'Equipment Report' : 'Requests Report';
+    exportToPDF(elementId, title);
+    setExporting(null);
+  }}
+  disabled={exporting !== null}
+>
+  {getPDFLabel()}
+</Button>
+
 </div>
 
         {renderError()}
@@ -605,70 +696,97 @@ const prepareUsersExportData = () => {
   </div>
 )}
 
-        {/* User Registration Chart (Full width) */}
-        <div className={styles.chartCard}>
-          <h3>User Registrations by {timeRange === 'year' ? 'Month' : 'Day'}</h3>
-          
-          {/* Time Range Selector */}
-          <div className={styles.timeRangeControls}>
-            <ButtonGroup size="small" variant="outlined">
-              <Button
-                variant={timeRange === 'week' ? 'contained' : 'outlined'}
-                onClick={() => setTimeRange('week')}
-              >
-                7 Days
-              </Button>
-              <Button
-                variant={timeRange === 'month' ? 'contained' : 'outlined'}
-                onClick={() => setTimeRange('month')}
-              >
-                30 Days
-              </Button>
-              <Button
-                variant={timeRange === 'year' ? 'contained' : 'outlined'}
-                onClick={() => setTimeRange('year')}
-              >
-                12 Months
-              </Button>
-            </ButtonGroup>
-          </div>
+        {/* User Registration Section with Export */}
+<div id="user-registration-chart" className={styles.userSection}>
+  {/* User Registration Section with Export */}
+<div id="user-registration-chart" className={styles.userSection}>
+  <div className={styles.userSectionHeader}>
+    <h3>User Registrations by {timeRange === 'year' ? 'Month' : 'Day'}</h3>
+    <div className={styles.userExportButtons}>
+      <Button
+        size="small"
+        variant="outlined"
+        startIcon={<Icon>download</Icon>}
+        onClick={() => exportUsersCSV()}
+      >
+        {timeRange === 'week' && 'Last 7 Days CSV'}
+        {timeRange === 'month' && 'Last 30 Days CSV'}
+        {timeRange === 'year' && 'Last 12 Months CSV'}
+      </Button>
+      <Button
+        size="small"
+        variant="outlined"
+        startIcon={<Icon>print</Icon>}
+        onClick={() => exportUsersPDF()}
+      >
+        PDF 
+      </Button>
+    </div>
+  </div>
+</div>
+  
+    {/* Time Range Selector */}
+    <div className={styles.timeRangeControls}>
+      <ButtonGroup size="small" variant="outlined">
+        <Button
+          variant={timeRange === 'week' ? 'contained' : 'outlined'}
+          onClick={() => setTimeRange('week')}
+        >
+          7 Days
+        </Button>
+        <Button
+          variant={timeRange === 'month' ? 'contained' : 'outlined'}
+          onClick={() => setTimeRange('month')}
+        >
+          30 Days
+        </Button>
+        <Button
+          variant={timeRange === 'year' ? 'contained' : 'outlined'}
+          onClick={() => setTimeRange('year')}
+        >
+          12 Months
+        </Button>
+      </ButtonGroup>
+    </div>
 
-          {userChartData.length === 0 ? (
-            <div className={styles.noData}>
-              <Icon className={styles.noDataIcon}>people</Icon>
-              <p>No user registrations in this period</p>
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={userChartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="count" name="New Users" fill="#415b80" />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </div>
+  {/* Chart */}
+  {userChartData.length === 0 ? (
+    <div className={styles.noData}>
+      <Icon className={styles.noDataIcon}>people</Icon>
+      <p>No user registrations in this period</p>
+    </div>
+  ) : (
+    <ResponsiveContainer width="100%" height={350}>
+      <BarChart data={userChartData}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="date" />
+        <YAxis />
+        <Tooltip />
+        <Legend />
+        <Bar dataKey="count" name="New Users" fill="#415b80" />
+      </BarChart>
+    </ResponsiveContainer>
+  )}
 
-        {/* Summary Stats */}
-        <div className={styles.summaryStats}>
-          <div className={styles.statCard}>
-            <Icon className={styles.statIcon}>people</Icon>
-            <div>
-              <h4>Total Users</h4>
-              <p>{users.length}</p>
-            </div>
-          </div>
-          <div className={styles.statCard}>
-            <Icon className={styles.statIcon}>person_add</Icon>
-            <div>
-              <h4>New Users ({timeRange === 'week' ? '7d' : timeRange === 'month' ? '30d' : '12m'})</h4>
-              <p>{userChartData.reduce((sum, item) => sum + item.count, 0)}</p>
-            </div>
-          </div>
-        </div>
+  {/* Summary Stats */}
+  <div className={styles.summaryStats}>
+    <div className={styles.statCard}>
+      <Icon className={styles.statIcon}>people</Icon>
+      <div>
+        <h4>Total Users</h4>
+        <p>{users.length}</p>
+      </div>
+    </div>
+    <div className={styles.statCard}>
+      <Icon className={styles.statIcon}>person_add</Icon>
+      <div>
+        <h4>New Users ({timeRange === 'week' ? '7d' : timeRange === 'month' ? '30d' : '12m'})</h4>
+        <p>{userChartData.reduce((sum, item) => sum + item.count, 0)}</p>
+      </div>
+    </div>
+  </div>
+</div>
+        
       </div>
     </PageLayout>
     </>
