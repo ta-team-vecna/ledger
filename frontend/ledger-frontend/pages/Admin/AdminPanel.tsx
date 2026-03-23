@@ -57,7 +57,7 @@ const adminNavItems: NavItem[] = [
   { text: 'Latest Actions', icon: 'history', path: '/admin', hasChevron: true },
   { text: 'Users', icon: 'people', path: '/admin/users', hasChevron: true },
   { text: 'Items', icon: 'inventory_2', path: '/admin/inventory', hasChevron: true },
-  { text: 'Reports', icon: 'bar_chart', path: '/admin', hasChevron: true },
+  { text: 'Reports', icon: 'bar_chart', path: '/admin/reports', hasChevron: true },
 ];
 
 const AdminPanel = () => {

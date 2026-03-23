@@ -468,149 +468,142 @@ const prepareUsersExportData = () => {
           </ButtonGroup>
         </div>
 
-        {/* Equipment Mode - Side by Side Layout */}
-        {dataMode === 'equipment' && (
-          <>
-            <div className={styles.doubleChartRow}>
-              {/* Equipment Pie Chart */}
-              <div id="equipment-chart" className={styles.halfChartCard}>
-              <div className={styles.halfChartCard}>
-                <h3>Equipment by Status</h3>
-                {equipmentChartData.length === 0 ? (
-                  <div className={styles.noDataSmall}>
-                    <Icon className={styles.noDataIcon}>inventory</Icon>
-                    <p>No data available</p>
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={equipmentChartData}
-                        dataKey="count"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={40}
-                        outerRadius={100}
-                        label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
-                      >
-                        {equipmentChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color || '#999'} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
-              </div>
+       
+       {/* Equipment Mode - Side by Side Layout */}
+{dataMode === 'equipment' && (
+  <div id="equipment-chart" className={styles.doubleChartRow}>
+    {/* Equipment Pie Chart */}
+    <div className={styles.halfChartCard}>
+      <h3>Equipment by Status</h3>
+      {equipmentChartData.length === 0 ? (
+        <div className={styles.noDataSmall}>
+          <Icon className={styles.noDataIcon}>inventory</Icon>
+          <p>No data available</p>
+        </div>
+      ) : (
+        <ResponsiveContainer width="100%" height={300}>
+          <PieChart>
+            <Pie
+              data={equipmentChartData}
+              dataKey="count"
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              innerRadius={40}
+              outerRadius={100}
+              label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+            >
+              {equipmentChartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color || '#999'} />
+              ))}
+            </Pie>
+            <Tooltip />
+          </PieChart>
+        </ResponsiveContainer>
+      )}
+    </div>
 
-              {/* Equipment Summary Stats */}
-              <div className={styles.halfChartCard}>
-                <h3>Equipment Summary</h3>
-                <div className={styles.statsList}>
-                  <div className={styles.statsListItem}>
-                    <Icon className={styles.statsListIcon}>inventory</Icon>
-                    <span className={styles.statsListLabel}>Total Items:</span>
-                    <span className={styles.statsListValue}>{equipment.length}</span>
-                  </div>
-                  <div className={styles.statsListItem}>
-                    <Icon className={styles.statsListIcon}>check_circle</Icon>
-                    <span className={styles.statsListLabel}>Available:</span>
-                    <span className={styles.statsListValue}>{equipment.filter(e => e.status === 'Available').length}</span>
-                  </div>
-                  <div className={styles.statsListItem}>
-                    <Icon className={styles.statsListIcon}>sync_alt</Icon>
-                    <span className={styles.statsListLabel}>Checked Out:</span>
-                    <span className={styles.statsListValue}>{equipment.filter(e => e.status === 'CheckedOut').length}</span>
-                  </div>
-                  <div className={styles.statsListItem}>
-                    <Icon className={styles.statsListIcon}>build</Icon>
-                    <span className={styles.statsListLabel}>Under Repair:</span>
-                    <span className={styles.statsListValue}>{equipment.filter(e => e.status === 'UnderRepair').length}</span>
-                  </div>
-                  <div className={styles.statsListItem}>
-                    <Icon className={styles.statsListIcon}>delete_forever</Icon>
-                    <span className={styles.statsListLabel}>Retired:</span>
-                    <span className={styles.statsListValue}>{equipment.filter(e => e.status === 'Retired').length}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
+    {/* Equipment Summary Stats */}
+    <div className={styles.halfChartCard}>
+      <h3>Equipment Summary</h3>
+      <div className={styles.statsList}>
+        <div className={styles.statsListItem}>
+          <Icon className={styles.statsListIcon}>inventory</Icon>
+          <span className={styles.statsListLabel}>Total Items:</span>
+          <span className={styles.statsListValue}>{equipment.length}</span>
+        </div>
+        <div className={styles.statsListItem}>
+          <Icon className={styles.statsListIcon}>check_circle</Icon>
+          <span className={styles.statsListLabel}>Available:</span>
+          <span className={styles.statsListValue}>{equipment.filter(e => e.status === 'Available').length}</span>
+        </div>
+        <div className={styles.statsListItem}>
+          <Icon className={styles.statsListIcon}>sync_alt</Icon>
+          <span className={styles.statsListLabel}>Checked Out:</span>
+          <span className={styles.statsListValue}>{equipment.filter(e => e.status === 'CheckedOut').length}</span>
+        </div>
+        <div className={styles.statsListItem}>
+          <Icon className={styles.statsListIcon}>build</Icon>
+          <span className={styles.statsListLabel}>Under Repair:</span>
+          <span className={styles.statsListValue}>{equipment.filter(e => e.status === 'UnderRepair').length}</span>
+        </div>
+        <div className={styles.statsListItem}>
+          <Icon className={styles.statsListIcon}>delete_forever</Icon>
+          <span className={styles.statsListLabel}>Retired:</span>
+          <span className={styles.statsListValue}>{equipment.filter(e => e.status === 'Retired').length}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
-        {/* Requests Mode - Side by Side Layout */}
-        {dataMode === 'requests' && (
-          <>
-          <div id="requests-chart" className={styles.halfChartCard}>
-            <div className={styles.doubleChartRow}>
-              {/* Requests Pie Chart */}
-              <div className={styles.halfChartCard}>
-                <h3>Requests by Status</h3>
-                {requestsChartData.length === 0 ? (
-                  <div className={styles.noDataSmall}>
-                    <Icon className={styles.noDataIcon}>request_page</Icon>
-                    <p>No data available</p>
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={requestsChartData}
-                        dataKey="count"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={40}
-                        outerRadius={100}
-                        label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
-                      >
-                        {requestsChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color || '#999'} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
+{/* Requests Mode - Side by Side Layout */}
+{dataMode === 'requests' && (
+  <div id="requests-chart" className={styles.doubleChartRow}>
+    {/* Requests Pie Chart */}
+    <div className={styles.halfChartCard}>
+      <h3>Requests by Status</h3>
+      {requestsChartData.length === 0 ? (
+        <div className={styles.noDataSmall}>
+          <Icon className={styles.noDataIcon}>request_page</Icon>
+          <p>No data available</p>
+        </div>
+      ) : (
+        <ResponsiveContainer width="100%" height={300}>
+          <PieChart>
+            <Pie
+              data={requestsChartData}
+              dataKey="count"
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              innerRadius={40}
+              outerRadius={100}
+              label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+            >
+              {requestsChartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color || '#999'} />
+              ))}
+            </Pie>
+            <Tooltip />
+          </PieChart>
+        </ResponsiveContainer>
+      )}
+    </div>
 
-              {/* Requests Summary Stats */}
-              <div className={styles.halfChartCard}>
-                <h3>Requests Summary</h3>
-                <div className={styles.statsList}>
-                  <div className={styles.statsListItem}>
-                    <Icon className={styles.statsListIcon}>assignment</Icon>
-                    <span className={styles.statsListLabel}>Total Requests:</span>
-                    <span className={styles.statsListValue}>{requests.length}</span>
-                  </div>
-                  <div className={styles.statsListItem}>
-                    <Icon className={styles.statsListIcon}>hourglass_empty</Icon>
-                    <span className={styles.statsListLabel}>Pending:</span>
-                    <span className={styles.statsListValue}>{requests.filter(r => r.status === 'Pending').length}</span>
-                  </div>
-                  <div className={styles.statsListItem}>
-                    <Icon className={styles.statsListIcon}>check_circle</Icon>
-                    <span className={styles.statsListLabel}>Approved:</span>
-                    <span className={styles.statsListValue}>{requests.filter(r => r.status === 'Approved').length}</span>
-                  </div>
-                  <div className={styles.statsListItem}>
-                    <Icon className={styles.statsListIcon}>cancel</Icon>
-                    <span className={styles.statsListLabel}>Rejected:</span>
-                    <span className={styles.statsListValue}>{requests.filter(r => r.status === 'Rejected' || r.status === 'Denied').length}</span>
-                  </div>
-                  <div className={styles.statsListItem}>
-                    <Icon className={styles.statsListIcon}>assignment_return</Icon>
-                    <span className={styles.statsListLabel}>Returned:</span>
-                    <span className={styles.statsListValue}>{requests.filter(r => r.status === 'Returned').length}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            </div>
-          </>
-        )}
+    {/* Requests Summary Stats */}
+    <div className={styles.halfChartCard}>
+      <h3>Requests Summary</h3>
+      <div className={styles.statsList}>
+        <div className={styles.statsListItem}>
+          <Icon className={styles.statsListIcon}>assignment</Icon>
+          <span className={styles.statsListLabel}>Total Requests:</span>
+          <span className={styles.statsListValue}>{requests.length}</span>
+        </div>
+        <div className={styles.statsListItem}>
+          <Icon className={styles.statsListIcon}>hourglass_empty</Icon>
+          <span className={styles.statsListLabel}>Pending:</span>
+          <span className={styles.statsListValue}>{requests.filter(r => r.status === 'Pending').length}</span>
+        </div>
+        <div className={styles.statsListItem}>
+          <Icon className={styles.statsListIcon}>check_circle</Icon>
+          <span className={styles.statsListLabel}>Approved:</span>
+          <span className={styles.statsListValue}>{requests.filter(r => r.status === 'Approved').length}</span>
+        </div>
+        <div className={styles.statsListItem}>
+          <Icon className={styles.statsListIcon}>cancel</Icon>
+          <span className={styles.statsListLabel}>Rejected:</span>
+          <span className={styles.statsListValue}>{requests.filter(r => r.status === 'Rejected' || r.status === 'Denied').length}</span>
+        </div>
+        <div className={styles.statsListItem}>
+          <Icon className={styles.statsListIcon}>assignment_return</Icon>
+          <span className={styles.statsListLabel}>Returned:</span>
+          <span className={styles.statsListValue}>{requests.filter(r => r.status === 'Returned').length}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
         {/* User Registration Chart (Full width) */}
         <div className={styles.chartCard}>
