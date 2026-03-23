@@ -19,6 +19,10 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import CircularProgress from '@mui/material/CircularProgress';
 import { apiFetch, API_BASE } from '../../src/utils/apiFetch';
+import Papa from 'papaparse';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import html2canvas from 'html2canvas';
 
 interface User {
   id: string;
@@ -294,6 +298,189 @@ const AdminUsers = () => {
 };
 
 
+
+const exportToCSV = () => {
+  // Prepare the data for export
+  const data = filteredUsers.map(user => ({
+    'First Name': user.firstName,
+    'Last Name': user.lastName,
+    'Email': user.email,
+    'Role': user.isAdmin ? 'Admin' : 'User',
+    'Created At': user.createdAt
+  }));
+  
+  const csv = Papa.unparse(data);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', `users_export_${new Date().toISOString().split('T')[0]}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+const exportToPDF = async () => {
+  const tableElement = document.getElementById('users-table-container');
+  if (!tableElement) return;
+  
+  try {
+    const originalTable = tableElement.querySelector('table');
+    if (!originalTable) return;
+    
+    // Clone the table
+    const tableClone = originalTable.cloneNode(true) as HTMLElement;
+    
+    // Create a temporary container with Material UI styling
+    const tempContainer = document.createElement('div');
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.top = '0';
+    tempContainer.style.width = '100%';
+    tempContainer.style.backgroundColor = '#f5f5f5';  // Material UI background
+    tempContainer.style.fontFamily = 'Roboto, "Helvetica Neue", sans-serif';
+    tempContainer.style.padding = '24px';
+    
+    // Add a header with Material UI styling
+    const header = document.createElement('div');
+    header.style.marginBottom = '24px';
+    header.style.padding = '16px';
+    header.style.backgroundColor = '#ffffff';
+    header.style.borderRadius = '12px';
+    header.style.boxShadow = '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)';
+    
+    const title = document.createElement('h1');
+    title.textContent = 'Users Report';
+    title.style.color = '#415b80';
+    title.style.fontSize = '24px';
+    title.style.fontWeight = '600';
+    title.style.margin = '0 0 8px 0';
+    title.style.fontFamily = 'Roboto, "Helvetica Neue", sans-serif';
+    
+    const date = document.createElement('p');
+    date.textContent = `Generated: ${new Date().toLocaleString()}`;
+    date.style.color = '#666';
+    date.style.fontSize = '14px';
+    date.style.margin = '0';
+    date.style.fontFamily = 'Roboto, "Helvetica Neue", sans-serif';
+    
+    const filterInfo = document.createElement('p');
+    let filterText = `Showing ${filteredUsers.length} of ${users.length} users`;
+    if (searchTerm) filterText += ` | Search: "${searchTerm}"`;
+    if (roleFilter !== 'all') filterText += ` | Role: ${roleFilter === 'admin' ? 'Admins' : 'Regular Users'}`;
+    filterInfo.textContent = filterText;
+    filterInfo.style.color = '#666';
+    filterInfo.style.fontSize = '12px';
+    filterInfo.style.margin = '8px 0 0 0';
+    filterInfo.style.fontFamily = 'Roboto, "Helvetica Neue", sans-serif';
+    
+    header.appendChild(title);
+    header.appendChild(date);
+    header.appendChild(filterInfo);
+    tempContainer.appendChild(header);
+    
+    // Style the table with Material UI design
+    tableClone.style.width = '100%';
+    tableClone.style.borderCollapse = 'collapse';
+    tableClone.style.backgroundColor = '#ffffff';
+    tableClone.style.borderRadius = '12px';
+    tableClone.style.overflow = 'hidden';
+    tableClone.style.boxShadow = '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)';
+    
+    // Style thead
+    const thead = tableClone.querySelector('thead');
+    if (thead) {
+      const headerRows = thead.querySelectorAll('tr');
+      headerRows.forEach(row => {
+        row.style.backgroundColor = '#415b80';
+        const cells = row.querySelectorAll('th');
+        cells.forEach(cell => {
+          cell.style.color = '#ffffff';
+          cell.style.fontWeight = '600';
+          cell.style.fontSize = '14px';
+          cell.style.padding = '16px';
+          cell.style.textAlign = 'left';
+          cell.style.fontFamily = 'Roboto, "Helvetica Neue", sans-serif';
+          cell.style.borderBottom = '1px solid #e0e0e0';
+        });
+      });
+    }
+    
+    // Style tbody
+    const tbody = tableClone.querySelector('tbody');
+    if (tbody) {
+      const rows = tbody.querySelectorAll('tr');
+      rows.forEach((row, index) => {
+        row.style.backgroundColor = index % 2 === 0 ? '#ffffff' : '#fafafa';
+        const cells = row.querySelectorAll('td');
+        cells.forEach(cell => {
+          cell.style.padding = '16px';
+          cell.style.fontSize = '13px';
+          cell.style.color = '#333';
+          cell.style.fontFamily = 'Roboto, "Helvetica Neue", sans-serif';
+          cell.style.borderBottom = '1px solid #e0e0e0';
+        });
+      });
+    }
+    
+    // Style the checkbox cells (if any)
+    const checkboxes = tableClone.querySelectorAll('.MuiCheckbox-root, input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+      const cell = checkbox.closest('td');
+      if (cell) {
+        cell.style.textAlign = 'center';
+        cell.style.width = '48px';
+      }
+    });
+    
+    tempContainer.appendChild(tableClone);
+    
+    // Add footer
+    const footer = document.createElement('div');
+    footer.style.marginTop = '24px';
+    footer.style.padding = '16px';
+    footer.style.textAlign = 'center';
+    footer.style.fontSize = '12px';
+    footer.style.color = '#999';
+    footer.style.fontFamily = 'Roboto, "Helvetica Neue", sans-serif';
+    footer.textContent = 'Generated by School Inventory Management System';
+    tempContainer.appendChild(footer);
+    
+    document.body.appendChild(tempContainer);
+    
+    // Wait for rendering
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Capture the entire container
+    const canvas = await html2canvas(tempContainer, {
+      scale: 2,
+      backgroundColor: '#f5f5f5',
+      logging: false
+    });
+    
+    document.body.removeChild(tempContainer);
+    
+    const imgData = canvas.toDataURL('image/png');
+    const doc = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4'
+    });
+    
+    const imgWidth = 280;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    
+    doc.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
+    doc.save(`users_report_${new Date().toISOString().split('T')[0]}.pdf`);
+    
+  } catch (error) {
+    console.error('PDF export failed:', error);
+    alert('Failed to generate PDF');
+  }
+};
+
   return (
     <PageLayout type="admin">
       <div className={styles.usersContainer}>
@@ -325,6 +512,20 @@ const AdminUsers = () => {
             >
               {selectMode ? 'Exit Selection' : 'Select Mode'}
             </Button>
+          <Button
+            variant="outlined" 
+            startIcon={<Icon>download</Icon>}
+            onClick={exportToCSV}
+          >
+            Export as CSV
+          </Button>
+          <Button
+            variant="outlined" 
+            startIcon={<Icon>print</Icon>}
+            onClick={exportToPDF}
+          >
+            Export as PDF
+          </Button>
           </div>
 
           <div className={styles.controlsRight}>
@@ -359,7 +560,7 @@ const AdminUsers = () => {
         </div>
 
         {/* Users Table */}
-        <div className={styles.tableContainer}>
+        <div className={styles.tableContainer}  id="users-table-container">
           <table className={styles.usersTable}>
             <thead>
               <tr>

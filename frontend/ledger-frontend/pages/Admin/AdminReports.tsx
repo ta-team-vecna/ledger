@@ -380,18 +380,8 @@ const prepareRequestsExportData = () => {
   }));
 };
 
-const prepareUsersExportData = () => {
-  return users.map(user => ({
-    'First Name': user.firstName,
-    'Last Name': user.lastName,
-    'Email': user.email,
-    'Role': user.role,
-    'Created': new Date(user.createdAtUtc).toLocaleDateString()
-  }));
-};
 
-// Export Users CSV (full user list)
-// Replace exportUsersCSV with this - exports the CHART data, not the user list
+
 const exportUsersCSV = () => {
   // Transform chart data for CSV
   const data = userChartData.map(item => ({
@@ -406,18 +396,6 @@ const exportUsersCSV = () => {
   });
   
   exportToCSV(data, `user_registrations_${timeRange}_${new Date().toISOString().split('T')[0]}`);
-};
-
-// Optional: Add an export for the raw user list separately
-const exportUsersFullListCSV = () => {
-  const data = users.map(user => ({
-    'First Name': user.firstName,
-    'Last Name': user.lastName,
-    'Email': user.email,
-    'Role': user.role,
-    'Registration Date': new Date(user.createdAtUtc).toLocaleDateString()
-  }));
-  exportToCSV(data, `users_full_list_${new Date().toISOString().split('T')[0]}`);
 };
 
 
@@ -719,7 +697,7 @@ const getPDFLabel = () => {
         startIcon={<Icon>print</Icon>}
         onClick={() => exportUsersPDF()}
       >
-        PDF 
+       Export as PDF 
       </Button>
     </div>
   </div>
