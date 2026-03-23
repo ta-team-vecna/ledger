@@ -14,26 +14,15 @@
 .logoSection {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
   padding: 24px 20px;
 }
 
-.logoIcon {
-  color: white !important;
-  font-size: 36px !important;
-}
-
-.logoTitle {
-  color: white;
-  font-weight: 700;
-  font-size: 16px;
-  line-height: 1.2;
-}
-
-.logoSubtitle {
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 12px;
-  margin-top: 2px;
+.logoImage {
+  width: 100%;
+  max-width: 170px;
+  height: auto;
+  display: block;
 }
 
 .nav {

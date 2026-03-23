@@ -4,6 +4,7 @@ import Avatar from '@mui/material/Avatar';
 import Drawer from '@mui/material/Drawer';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import styles from './sideBar.module.css';
+import ledgerLightLogo from '../../src/assets/ledger-light.svg';
 
 export interface NavItem {
   text: string;
@@ -29,11 +30,7 @@ const Sidebar = ({ title, subtitle, navItems, userName, userEmail, mobileOpen, o
   const content = (
     <div className={styles.sidebar}>
       <div className={styles.logoSection}>
-        <Icon className={styles.logoIcon}>inventory_2</Icon>
-        <div>
-          <div className={styles.logoTitle}>{title}</div>
-          <div className={styles.logoSubtitle}>{subtitle}</div>
-        </div>
+        <img className={styles.logoImage} src={ledgerLightLogo} alt={`${title} ${subtitle}`.trim()} />
       </div>
 
       <nav className={styles.nav}>
