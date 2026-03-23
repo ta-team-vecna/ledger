@@ -1,27 +1,11 @@
 :root{
-  --accent-color:#415b80; 
-  --page-background-color: #dbe4f2;
+  --accent-color:#1e2a3a;
+  --accent-color-strong: #172130;
+  --accent-color-soft: #324357;
+  --brand-green: #22b36a;
+  --page-background-color: #dde2e9;
   --card-background-color: #ffffff;
   font-family:  Roboto;
-}
-
-.topBar {
-  width: 100%; 
-  min-height: clamp(3vh, 8vw, 9vh);
-  background-color: var(--accent-color);
-  display: flex;
-  align-items: center;       
-  justify-content: center;   
-  position: relative;
-  left: 0;
-  right: 0;
-}
-
-.topBar p {
-  color: white;
-  font-weight: bolder;
-  font-size: clamp(16px, 4vw, 32px);
-  margin: 0;  
 }
 
 html, body {
@@ -31,8 +15,9 @@ html, body {
   overflow-x: hidden;
   background-color: var(--page-background-color);
   background-image:
-    radial-gradient(1200px 550px at 50% -180px, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0) 72%),
-    linear-gradient(180deg, #dfe8f5 0%, #d3deef 48%, #cad7ea 100%);
+    radial-gradient(960px 520px at 10% -12%, rgba(31, 42, 55, 0.18) 0%, rgba(31, 42, 55, 0) 74%),
+    radial-gradient(860px 480px at 90% 112%, rgba(34, 179, 106, 0.08) 0%, rgba(34, 179, 106, 0) 70%),
+    linear-gradient(180deg, #e7ebf1 0%, #dde3ea 52%, #d4dbe3 100%);
   background-repeat: no-repeat;
   background-attachment: fixed;
 }
@@ -42,41 +27,76 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: center;       
-  justify-content: center;   
+  justify-content: flex-start;
   position: fixed;
   width: clamp(350px, 60vw, 500px);
   top: 50%;
   left: 50%;
-  height: 500px;
+  height: auto;
+  max-height: 92vh;
+  overflow-y: auto;
   transform: translate(-50%, -50%);
+  padding: 18px 0 8px;
   border-radius: 12px;  
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid rgba(23,33,48,0.08);
     box-shadow: 
-    0 1px 3px rgba(0,0,0,0.08),    /* Very subtle all-around */
-    0 20px 25px -15px rgba(0,0,0,0.4); /* Heavy bottom spread */
+    0 1px 3px rgba(0,0,0,0.08),
+    0 20px 26px -15px rgba(23,33,48,0.32);
+}
+
+.authLogo {
+  width: min(210px, 58%);
+  height: auto;
+  display: block;
+  margin: 20px auto 22px;
 }
 
 .loginCard h1 {
   color: var(--accent-color);
-  font-size: clamp(16px, 7vw, 32px);
+  font-size: clamp(16px, 4vw, 24px);
+  margin: 0;
+  line-height: 1.2;
+  letter-spacing: 0.2px;
 }
 
 .loginCard p {
-  color: var(--accent-color);
-  font-size: clamp(12px, 4vw, 18px);
-  font-weight: bolder;
+  color: var(--accent-color-soft);
+  font-size: clamp(12px, 2.4vw, 15px);
+  font-weight: 600;
+  margin: 8px 0 12px;
 }
 
   .loginCard .TextInput , .customButton  {
-    margin-bottom: 20px !important;
+    margin-bottom: 14px !important;
     width: 90%;
-    min-height: 60px;
+    min-height: 54px;
   }
 
   .customButton{
-    min-height: 60px;
+    min-height: 54px;
+    background-color: var(--accent-color) !important;
+    color: #fff !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.3px;
+  }
+
+  .customButton:hover{
+    background-color: var(--accent-color-strong) !important;
   }
 
 .customLink{
-  margin-bottom: 20px !important;
+  margin-bottom: 12px !important;
+  color: var(--accent-color-soft) !important;
+  text-decoration-color: rgba(50,67,87,0.45) !important;
+}
+
+.customLink:hover{
+  color: var(--brand-green) !important;
+  text-decoration-color: var(--brand-green) !important;
+}
+
+.registerCard {
+  min-height: auto;
+  padding-top: 16px;
+  padding-bottom: 14px;
 }
