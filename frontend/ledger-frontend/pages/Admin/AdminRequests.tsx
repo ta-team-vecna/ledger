@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import Topbar from "../../components/topBar/topBar";
-import AdminSidebar from "../../components/adminSideBar/adminSideBar";
+import PageLayout from '../../components/PageLayout/PageLayout';
 import Icon from '@mui/material/Icon';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
@@ -54,7 +53,6 @@ const STATUS_OPTIONS: { value: string; label: string; color: string; icon: strin
 
 const AdminRequests = () => {
   const { loading: authLoading } = useAdminGuard();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [requests, setRequests] = useState<EquipmentRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -189,23 +187,15 @@ const AdminRequests = () => {
 
   if (authLoading || loading) {
     return (
-      <>
-        <Topbar onMenuClick={() => setSidebarOpen(true)} />
-        <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <PageLayout type="admin">
         <div className={styles.loadingContainer}><div>Loading requests...</div></div>
-      </>
+      </PageLayout>
     );
   }
 
   return (
-    <>
-      <Topbar onMenuClick={() => setSidebarOpen(true)} />
-      <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      <div className={styles.container} style={{
-        marginLeft: sidebarOpen ? '240px' : '0',
-        transition: 'margin-left 0.3s ease'
-      }}>
+    <PageLayout type="admin">
+      <div className={styles.container}>
         <div className={styles.header}>
           <h1>Equipment Requests</h1>
         </div>
@@ -486,7 +476,7 @@ const AdminRequests = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </>
+    </PageLayout>
   );
 };
 

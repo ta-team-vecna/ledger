@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import Topbar from "../../components/topBar/topBar";
-import AdminSidebar from "../../components/adminSideBar/adminSideBar";
+import PageLayout from '../../components/PageLayout/PageLayout';
 import Icon from '@mui/material/Icon';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
@@ -45,7 +44,6 @@ const STATUS_OPTIONS: { value: string; label: string; color: string; icon: strin
 
 const RequestsTable = () => {
   const { user, isLoading: authLoading } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
@@ -172,22 +170,15 @@ const RequestsTable = () => {
 
   if (authLoading || loading) {
     return (
-      <>
-        <Topbar onMenuClick={() => setSidebarOpen(true)} />
+      <PageLayout type="user">
         <div className={styles.loadingContainer}>Loading your requests...</div>
-      </>
+      </PageLayout>
     );
   }
 
   return (
-    <>
-      <Topbar onMenuClick={() => setSidebarOpen(true)} />
-      <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      <div className={styles.container} style={{
-        marginLeft: sidebarOpen ? '240px' : '0',
-        transition: 'margin-left 0.3s ease'
-      }}>
+    <PageLayout type="user">
+      <div className={styles.container}>
         <div className={styles.header}>
           <h1>My Requests</h1>
 
@@ -395,7 +386,7 @@ const RequestsTable = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </>
+    </PageLayout>
   );
 };
 

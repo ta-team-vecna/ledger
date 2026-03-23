@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import Topbar from '../../components/topBar/topBar';
+import PageLayout from '../../components/PageLayout/PageLayout';
 import Icon from '@mui/material/Icon';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
@@ -112,9 +112,7 @@ const UserInventory = () => {
   };
 
   return (
-    <>
-      <Topbar />
-
+    <PageLayout type="user">
       <div className={styles.container}>
         <div className={styles.header}>
           <h1 className={styles.title}>
@@ -306,7 +304,7 @@ const UserInventory = () => {
           onRequest={handleRequestFromDetails}
         />
       )}
-    </>
+    </PageLayout>
   );
 };
 
