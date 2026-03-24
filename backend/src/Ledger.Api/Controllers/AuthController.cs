@@ -232,6 +232,59 @@ public sealed class AuthController : ControllerBase {
     }
 
     /// <summary>
+    /// Generates a password reset token for the given email address.
+    /// The token is returned directly in the response (development mode — in production, send via email).
+    /// </summary>
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest request) {
+        var email = request.Email.Trim().ToLowerInvariant();
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == email);
+
+        // Always return 200 to avoid email enumeration
+        if (user is null) return Ok(new { message = "If that email is registered, a reset link has been sent." });
+
+        user.PasswordResetToken = Guid.NewGuid().ToString("N");
+        user.PasswordResetTokenExpiry = DateTime.UtcNow.AddHours(1);
+        await _db.SaveChangesAsync();
+
+        // In production, send user.PasswordResetToken via email.
+        // For development, the token is returned in the response.
+        return Ok(new {
+            message = "If that email is registered, a reset link has been sent.",
+            resetToken = user.PasswordResetToken   // remove this line in production
+        });
+    }
+
+    /// <summary>
+    /// Resets the user's password using a valid reset token.
+    /// </summary>
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ResetPassword(ResetPasswordRequest request) {
+        var user = await _db.Users.FirstOrDefaultAsync(u =>
+            u.PasswordResetToken == request.Token &&
+            u.PasswordResetTokenExpiry > DateTime.UtcNow);
+
+        if (user is null) {
+            return BadRequest(new ProblemDetails {
+                Detail = "Invalid or expired reset token.",
+                Status = StatusCodes.Status400BadRequest,
+            });
+        }
+
+        user.PasswordHash = _passwordHasher.HashPassword(user, request.NewPassword);
+        user.PasswordResetToken = null;
+        user.PasswordResetTokenExpiry = null;
+        await _db.SaveChangesAsync();
+
+        return Ok(new { message = "Password reset successfully." });
+    }
+
+    /// <summary>
     /// Retrieves the profile information of the currently authenticated user.
     /// </summary>
     /// <returns>The current user's profile details.</returns>

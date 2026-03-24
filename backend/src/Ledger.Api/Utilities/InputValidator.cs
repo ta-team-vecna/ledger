@@ -15,7 +15,7 @@ public static partial class InputValidator {
     public const int NameMaxLength = 100;
     public const int EmailMaxLength = 256;
     public const int PasswordMaxLength = 128;
-    public const int PasswordMinLength = 6;
+    public const int PasswordMinLength = 8;
     public const int NotesMaxLength = 1000;
     public const int CommentMaxLength = 1000;
 

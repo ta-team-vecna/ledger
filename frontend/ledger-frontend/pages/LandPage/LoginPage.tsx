@@ -67,6 +67,9 @@ const LoginPage = () => {
         <Link component={RouterLink} to="/register" className={styles.customLink} id="register-link">
           Register here
         </Link>
+        <Link component={RouterLink} to="/forgot-password" className={styles.customLink} style={{ marginTop: 8, fontSize: '0.85rem' }}>
+          Forgot password?
+        </Link>
         <div className={styles.customLinkDiv}></div>
       </div>
     </>

@@ -13,6 +13,9 @@ public sealed class ApplicationUser {
     public string? RefreshToken { get; set; }
     public DateTime? RefreshTokenExpiryTime { get; set; }
 
+    public string? PasswordResetToken { get; set; }
+    public DateTime? PasswordResetTokenExpiry { get; set; }
+
     public UserRole Role { get; set; } = UserRole.User;
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
