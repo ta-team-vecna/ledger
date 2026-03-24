@@ -94,7 +94,7 @@
 }
 
 .submitButton {
-  background-color: var(--accent-color) !important;
+  background-color: var(--accent-color, #415b80) !important;
   min-width: 140px;
   color: #ffffff !important;
   font-weight: 600 !important;
