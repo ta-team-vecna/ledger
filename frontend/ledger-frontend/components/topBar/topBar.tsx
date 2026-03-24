@@ -63,7 +63,7 @@ const Topbar: React.FC<TopbarProps> = ({ onMenuClick }) => {
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
         <Alert severity="error" onClose={() => setShowAdminAlert(false)}>
-          You don't have permission to access the admin panel
+          You don't have permission to access this page 
         </Alert>
       </Snackbar>
 
