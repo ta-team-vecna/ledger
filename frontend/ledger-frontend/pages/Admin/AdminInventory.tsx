@@ -117,25 +117,6 @@ const STATUS_NUMBER: Record<string, number> = {
   'retired': 4
 };
 
-const isItemInUse = (itemId: string): boolean => {
-  const item = equipment.find(e => e.id === itemId);
-  if (!item) return false;
-  
-  // Check if item is checked out
-  if (item.status === 'CheckedOut' || item.status === 'Reserved') return true;
-  
-  // Check if there's an active request
-  const activeRequest = requests.find(r => 
-    r.equipmentId === itemId && 
-    r.status === 'Approved' && 
-    !r.returnedAtUtc &&
-    new Date() >= new Date(r.requestedFromUtc) && 
-    new Date() <= new Date(r.requestedToUtc)
-  );
-  
-  return !!activeRequest;
-};  
-
   // Calculate display status based on equipment and requests
 const getDisplayStatus = (item: Equipment): string => {
   // First, trust what the equipment table says about its CURRENT state
@@ -206,6 +187,9 @@ const getDisplayStatus = (item: Equipment): string => {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchData(page); }, [page]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => { setPage(1); }, [statusFilter, searchTerm, categoryFilter]);
 
   // Handle status change
   const handleStatusChange = async (action: string) => {
@@ -357,6 +341,8 @@ const getDisplayStatus = (item: Equipment): string => {
 
   const categories = ['all', ...new Set(displayItems.map(i => i.category))];
 
+  const hasActiveFilter = statusFilter !== 'all' || searchTerm !== '' || categoryFilter !== 'all';
+
   const filteredItems = displayItems.filter(item => {
     const matchesSearch = searchTerm === '' ||
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -372,7 +358,7 @@ const getDisplayStatus = (item: Equipment): string => {
   if (authLoading || loading) {
     return (
       <PageLayout type="admin">
-        <div className={styles.loadingContainer}>Loading...</div>
+        <div className={styles.loadingContainer}>Loading items...</div>
       </PageLayout>
     );
   }
@@ -502,31 +488,17 @@ const getDisplayStatus = (item: Equipment): string => {
                     </td>
                     <td className={styles.itemName}>{item.name}</td>
                     <td>
-                      {isItemInUse(item.id) ? (
-                        <Chip
-                          icon={<Icon className={styles.statusIcon}>block</Icon>}
-                          label="CHECKED OUT/RESERVED"
-                          size="small"
-                          className={styles.statusChip}
-                          style={{
-                            backgroundColor: '#f4433620',
-                            color: '#f44336',
-                            borderColor: '#f44336'
-                          }}
-                        />
-                      ) : (
-                        <Chip
-                          icon={<Icon className={styles.statusIcon}>{statusConfig.icon}</Icon>}
-                          label={statusConfig.label}
-                          size="small"
-                          className={styles.statusChip}
-                          style={{
-                            backgroundColor: `${statusConfig.color}20`,
-                            color: statusConfig.color,
-                            borderColor: statusConfig.color
-                          }}
-                        />
-                      )}
+                      <Chip
+                        icon={<Icon className={styles.statusIcon}>{statusConfig.icon}</Icon>}
+                        label={statusConfig.label}
+                        size="small"
+                        className={styles.statusChip}
+                        style={{
+                          backgroundColor: `${statusConfig.color}20`,
+                          color: statusConfig.color,
+                          borderColor: statusConfig.color
+                        }}
+                      />
                     </td>
                     <td>{item.location}</td>
                     <td>
@@ -569,14 +541,14 @@ const getDisplayStatus = (item: Equipment): string => {
 
         {/* Footer */}
         <div className={styles.tableFooter}>
-          <span>Showing {filteredItems.length} of {equipment.length} on this page</span>
+          <span>Showing {filteredItems.length} of {hasActiveFilter ? filteredItems.length : totalCount}{hasActiveFilter ? ' (filtered)' : ''}</span>
           {selectedItems.length > 0 && (
             <span className={styles.selectedCount}>
               {selectedItems.length} selected
             </span>
           )}
         </div>
-        <Pagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={PAGE_SIZE} onPageChange={setPage} />
+        <Pagination page={page} totalPages={hasActiveFilter ? 1 : totalPages} totalCount={totalCount} pageSize={PAGE_SIZE} onPageChange={setPage} />
       </div>
 
       {/* Modals */}
