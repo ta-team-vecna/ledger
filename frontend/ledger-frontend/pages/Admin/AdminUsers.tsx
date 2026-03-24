@@ -21,7 +21,6 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { apiFetch, API_BASE } from '../../src/utils/apiFetch';
 import Papa from 'papaparse';
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import Pagination from '../../components/Pagination/Pagination';
 
@@ -99,6 +98,9 @@ const AdminUsers = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchUsers(page); }, [page]);
 
+  // Reset to page 1 when filters change
+  useEffect(() => { setPage(1); }, [roleFilter, searchTerm]);
+
   // Load current user ID
   useEffect(() => {
     const fetchCurrentUserId = async () => {
@@ -152,67 +154,41 @@ const AdminUsers = () => {
 
 
   const handleRoleChange = async (userId: string, currentIsAdmin: boolean) => {
-  const newRole = currentIsAdmin ? 0 : 1;
-  const action = currentIsAdmin ? 'DEMOTE' : 'PROMOTE';
-  
-  if (!confirm(`Are you sure you want to ${action} this user?`)) return;
+    const newRole = currentIsAdmin ? 'User' : 'Admin';
+    const action = currentIsAdmin ? 'DEMOTE' : 'PROMOTE';
 
-  try {
-    const meResponse = await apiFetch(`${API_BASE}/api/auth/me`);
-    const me = await meResponse.json();
-    
-    const usersResponse = await apiFetch(`${API_BASE}/api/users`);
-    
-    if (!usersResponse.ok) {
-      throw new Error('Failed to verify permissions');
-    }
-    
-    const userList: UserResponse[] = await usersResponse.json();
-    const currentUser = userList.find((u: UserResponse) => u.id === me.userId);
-    
-    // Double-check I'm actually admin
-    if (!currentUser || currentUser.role !== 'Admin') {
-      throw new Error('You must be an admin to change roles');
-    }
+    if (!confirm(`Are you sure you want to ${action} this user?`)) return;
 
-    // Now actually perform the role change
-    const response = await apiFetch(`${API_BASE}/api/users/${userId}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ role: newRole })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to update role');
-    }
-
-    // Refresh the user list to get updated data
-    await fetchUsers();
-    
-    // Check if this was the current user
-    const updatedUsersResponse = await apiFetch(`${API_BASE}/api/users`);
-    const updatedUsers: UserResponse[] = await updatedUsersResponse.json();
-    const updatedCurrentUser = updatedUsers.find((u: UserResponse) => u.id === me.userId);
-
-    if (updatedCurrentUser?.id === userId) {
-      alert('Your role has been changed. Logging you out...');
-      
-      await apiFetch(`${API_BASE}/api/auth/logout`, {
-        method: 'POST'
+    try {
+      const response = await apiFetch(`${API_BASE}/api/users/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: newRole })
       });
-      
-      localStorage.clear();
-      sessionStorage.clear();
-      window.location.href = '/login';
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || errorData.message || 'Failed to update role');
+      }
+
+      // If demoting yourself, log out
+      if (userId === currentUserIdFromAuth && currentIsAdmin) {
+        alert('Your role has been changed. Logging you out...');
+        await apiFetch(`${API_BASE}/api/auth/logout`, { method: 'POST' });
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.href = '/login';
+        return;
+      }
+
+      await fetchUsers();
+    } catch (error) {
+      console.error(`Failed to ${action} user:`, error);
+      alert(`Failed to ${action} user. Please try again.`);
     }
-  } catch (error) {
-    console.error(`Failed to ${action} user:`, error);
-    alert(`Failed to ${action} user. Please try again.`);
-  }
-};
+  };
+
+  const hasActiveFilter = roleFilter !== 'all' || searchTerm !== '';
 
   // Filter users based on search and role
   const filteredUsers = users.filter(user => {
@@ -239,70 +215,34 @@ const AdminUsers = () => {
   }
 
   const handleDeleteSelected = async () => {
-  if (selectedUsers.length === 0) return;
-  
-  setDeleting(true);
-  
-  try {
-    // VERIFY admin status before deletion
-    const meResponse = await apiFetch(`${API_BASE}/api/auth/me`);
-    const me = await meResponse.json();
-    
-    const usersResponse = await apiFetch(`${API_BASE}/api/users`);
-    
-    if (!usersResponse.ok) {
-      throw new Error('Failed to verify permissions');
-    }
-    
-    const userList: UserResponse[] = await usersResponse.json();
-    const currentUser = userList.find((u: UserResponse) => u.id === me.userId);
-    
-    if (!currentUser || currentUser.role !== 'Admin') {
-      alert('You must be an admin to delete users');
-      setDeleteConfirmOpen(false);
-      setDeleting(false);
-      return;
-    }
+    if (selectedUsers.length === 0) return;
 
-    // Check if trying to delete yourself
-    if (selectedUsers.includes(currentUser.id)) {
+    if (currentUserIdFromAuth && selectedUsers.includes(currentUserIdFromAuth)) {
       alert('You cannot delete your own account');
       setDeleteConfirmOpen(false);
-      setDeleting(false);
       return;
     }
 
-    // Delete each selected user
-    const deletePromises = selectedUsers.map(id => 
-      apiFetch(`${API_BASE}/api/users/${id}`, {
-        method: 'DELETE'
-      })
-    );
-    
-    const results = await Promise.all(deletePromises);
-    
-    // Check if any deletions failed
-    const failed = results.filter(r => !r.ok);
-    if (failed.length > 0) {
-      console.error(`${failed.length} users failed to delete`);
-      alert(`${failed.length} users could not be deleted. They may not exist or you lack permission.`);
+    setDeleting(true);
+    try {
+      const results = await Promise.all(
+        selectedUsers.map(id => apiFetch(`${API_BASE}/api/users/${id}`, { method: 'DELETE' }))
+      );
+      const failed = results.filter(r => !r.ok);
+      if (failed.length > 0) {
+        alert(`${failed.length} users could not be deleted.`);
+      }
+      await fetchUsers();
+      setSelectedUsers([]);
+      setSelectMode(false);
+      setDeleteConfirmOpen(false);
+    } catch (error) {
+      console.error('Failed to delete users:', error);
+      alert('Failed to delete users. Please try again.');
+    } finally {
+      setDeleting(false);
     }
-    
-    // Refresh the user list
-    await fetchUsers();
-    
-    // Clear selection and exit select mode
-    setSelectedUsers([]);
-    setSelectMode(false);
-    setDeleteConfirmOpen(false);
-    
-  } catch (error) {
-    console.error('Failed to delete users:', error);
-    alert('Failed to delete users. Please try again.');
-  } finally {
-    setDeleting(false);
-  }
-};
+  };
 
 
 
@@ -647,14 +587,14 @@ const exportToPDF = async () => {
 
         {/* Footer with counts */}
         <div className={styles.tableFooter}>
-          <span>Showing {filteredUsers.length} of {users.length} on this page</span>
+          <span>Showing {filteredUsers.length} of {hasActiveFilter ? filteredUsers.length : totalCount}{hasActiveFilter ? ' (filtered)' : ''}</span>
           {selectedUsers.length > 0 && (
             <span className={styles.selectedCount}>
               {selectedUsers.length} selected
             </span>
           )}
         </div>
-        <Pagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={PAGE_SIZE} onPageChange={setPage} />
+        <Pagination page={page} totalPages={hasActiveFilter ? 1 : totalPages} totalCount={totalCount} pageSize={PAGE_SIZE} onPageChange={setPage} />
       </div>
 
       {/* Add User Modal */}
