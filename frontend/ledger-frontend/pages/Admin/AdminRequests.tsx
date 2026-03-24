@@ -21,6 +21,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Tooltip from '@mui/material/Tooltip';
 import RequestModal from "../../components/modals/RequestModal"
+import Pagination from '../../components/Pagination/Pagination';
 import { apiFetch, API_BASE } from '../../src/utils/apiFetch';
 
 interface EquipmentRequest {
@@ -57,6 +58,10 @@ const AdminRequests = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const PAGE_SIZE = 20;
   const [selectedRequest, setSelectedRequest] = useState<EquipmentRequest | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -65,12 +70,13 @@ const AdminRequests = () => {
   const [returnNotes, setReturnNotes] = useState('');
   const [wantsRepair, setWantsRepair] = useState(false);
 
-  const fetchRequests = async () => {
+  const fetchRequests = async (currentPage = page) => {
     try {
-      const response = await apiFetch(`${API_BASE}/api/requests/all`);
+      const response = await apiFetch(`${API_BASE}/api/requests/all?page=${currentPage}&pageSize=${PAGE_SIZE}`);
       const data = await response.json();
-      const requestsArray = Array.isArray(data) ? data : Object.values(data);
-      setRequests(requestsArray as EquipmentRequest[]);
+      setRequests(data.items ?? []);
+      setTotalPages(data.totalPages ?? 1);
+      setTotalCount(data.totalCount ?? 0);
     } catch (error) {
       console.error('Failed to fetch requests:', error);
     } finally {
@@ -78,7 +84,7 @@ const AdminRequests = () => {
     }
   };
 
-  useEffect(() => { fetchRequests(); }, []);
+  useEffect(() => { fetchRequests(page); }, [page]);
 
   // Derive display status from backend status + dates (same logic as user's page)
   const getStatusDisplay = (req: EquipmentRequest) => {
@@ -332,7 +338,7 @@ const AdminRequests = () => {
         </div>
 
         <div className={styles.footer}>
-          <span>Showing {filteredRequests.length} of {requests.length} requests</span>
+          <span>Showing {filteredRequests.length} of {requests.length} on this page</span>
           {statusFilter !== 'all' && (
             <Chip
               size="small"
@@ -342,6 +348,7 @@ const AdminRequests = () => {
             />
           )}
         </div>
+        <Pagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={PAGE_SIZE} onPageChange={setPage} />
       </div>
 
       {/* Request Details Dialog */}

@@ -83,24 +83,25 @@ const Dashboard = () => {
   }
 
   const fetchRequests = () => {
-    apiFetch(`${API_BASE}/api/requests/me`)
+    apiFetch(`${API_BASE}/api/requests/me?page=1&pageSize=20`)
       .then(res => res.ok ? res.json() : Promise.reject())
-      .then((data: RequestData[]) => {
-        setPendingRequests(data.filter(r => r.status.toLowerCase() === 'pending').length);
-        const checked = data.filter(r => r.status.toLowerCase() === 'checkedout');
+      .then((data: { items: RequestData[]; totalCount: number }) => {
+        const items = data.items ?? [];
+        setPendingRequests(items.filter(r => r.status.toLowerCase() === 'pending').length);
+        const checked = items.filter(r => r.status.toLowerCase() === 'checkedout');
         setBorrowedItems(checked.length);
         setActiveRequests(checked);
-        setRecentRequests(data.slice(0, 5));
+        setRecentRequests(items.slice(0, 5));
       })
       .catch(() => {});
   };
 
   useEffect(() => {
-    apiFetch(`${API_BASE}/api/equipment`)
+    apiFetch(`${API_BASE}/api/equipment?page=1&pageSize=100`)
       .then(res => res.ok ? res.json() : Promise.reject())
-      .then((data: EquipmentData[]) => {
-        setTotalItems(data.length);
-        setCategories(new Set(data.map(e => e.type)).size);
+      .then((data: { items: EquipmentData[]; totalCount: number }) => {
+        setTotalItems(data.totalCount);
+        setCategories(new Set((data.items ?? []).map(e => e.type)).size);
       })
       .catch(() => {});
 

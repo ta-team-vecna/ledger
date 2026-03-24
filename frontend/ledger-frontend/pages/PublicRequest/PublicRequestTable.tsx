@@ -17,6 +17,7 @@ import Checkbox from '@mui/material/Checkbox';
 import styles from "./PublicRequestTable.module.css";
 import { useAuth } from "../../src/context/useAuth";
 import { apiFetch, API_BASE } from '../../src/utils/apiFetch';
+import Pagination from '../../components/Pagination/Pagination';
 
 interface Request {
   id: string;
@@ -53,12 +54,18 @@ const RequestsTable = () => {
   const [returnNotes, setReturnNotes] = useState('');
   const [wantsRepair, setWantsRepair] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const PAGE_SIZE = 20;
 
-  const fetchRequests = async () => {
+  const fetchRequests = async (currentPage = page) => {
     try {
-      const res = await apiFetch(`${API_BASE}/api/requests/me`);
+      const res = await apiFetch(`${API_BASE}/api/requests/me?page=${currentPage}&pageSize=${PAGE_SIZE}`);
       const data = await res.json();
-      setRequests(Array.isArray(data) ? data : []);
+      setRequests(data.items ?? []);
+      setTotalPages(data.totalPages ?? 1);
+      setTotalCount(data.totalCount ?? 0);
     } catch (error) {
       console.error('Failed to fetch requests:', error);
     } finally {
@@ -66,9 +73,8 @@ const RequestsTable = () => {
     }
   };
 
-  useEffect(() => {
-    if (user) fetchRequests();
-  }, [user]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (user) fetchRequests(page); }, [user, page]);
 
   // Compute display status (handles overdue derivation from Approved/CheckedOut)
   const getStatusDisplay = (req: Request) => {
@@ -262,8 +268,9 @@ const RequestsTable = () => {
         )}
 
         <div className={styles.footer}>
-          Showing {filteredRequests.length} of {requests.length} requests
+          Showing {filteredRequests.length} of {requests.length} on this page
         </div>
+        <Pagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={PAGE_SIZE} onPageChange={setPage} />
       </div>
 
       {/* Details Dialog */}

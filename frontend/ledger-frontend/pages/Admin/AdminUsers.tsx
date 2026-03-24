@@ -19,6 +19,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import CircularProgress from '@mui/material/CircularProgress';
 import { apiFetch, API_BASE } from '../../src/utils/apiFetch';
+import Pagination from '../../components/Pagination/Pagination';
 
 interface User {
   id: string;
@@ -45,6 +46,10 @@ const AdminUsers = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const PAGE_SIZE = 20;
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [selectMode, setSelectMode] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -56,17 +61,18 @@ const AdminUsers = () => {
 
 
   
-  const fetchUsers = async () => {
+  const fetchUsers = async (currentPage = page) => {
     try {
-      const response = await apiFetch(`${API_BASE}/api/users`);
-      
+      const response = await apiFetch(`${API_BASE}/api/users?page=${currentPage}&pageSize=${PAGE_SIZE}`);
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
-      const data: UserResponse[] = await response.json();
-      
-      const transformedUsers = data.map((user: UserResponse) => ({
+
+      const data = await response.json();
+      const items: UserResponse[] = data.items ?? [];
+
+      const transformedUsers = items.map((user: UserResponse) => ({
         id: user.id,
         firstName: user.firstName,
         lastName: user.lastName,
@@ -74,8 +80,10 @@ const AdminUsers = () => {
         createdAt: new Date(user.createdAtUtc).toISOString().split('T')[0],
         isAdmin: user.role === 'Admin'
       }));
-      
+
       setUsers(transformedUsers);
+      setTotalPages(data.totalPages ?? 1);
+      setTotalCount(data.totalCount ?? 0);
     } catch (error) {
       console.error('Failed to fetch users:', error);
     } finally {
@@ -84,9 +92,8 @@ const AdminUsers = () => {
   };
 
   // Load users
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchUsers(page); }, [page]);
 
   // Load current user ID
   useEffect(() => {
@@ -439,13 +446,14 @@ const AdminUsers = () => {
 
         {/* Footer with counts */}
         <div className={styles.tableFooter}>
-          <span>Showing {filteredUsers.length} of {users.length} users</span>
+          <span>Showing {filteredUsers.length} of {users.length} on this page</span>
           {selectedUsers.length > 0 && (
             <span className={styles.selectedCount}>
               {selectedUsers.length} selected
             </span>
           )}
         </div>
+        <Pagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={PAGE_SIZE} onPageChange={setPage} />
       </div>
 
       {/* Add User Modal */}

@@ -140,29 +140,30 @@ const AdminPanel = () => {
   }, [formatTimeAgo, isOverdueRequest]);
 
   useEffect(() => {
-    apiFetch(`${API_BASE}/api/users`)
+    apiFetch(`${API_BASE}/api/users?page=1&pageSize=100`)
       .then(res => res.ok ? res.json() : Promise.reject())
-      .then((data: UserData[]) => {
-        setTotalUsers(data.length);
-        setAdminCount(data.filter(u => u.role === 'Admin').length);
+      .then((data: { items: UserData[]; totalCount: number }) => {
+        setTotalUsers(data.totalCount);
+        setAdminCount((data.items ?? []).filter(u => u.role === 'Admin').length);
       })
       .catch(() => {});
 
-    apiFetch(`${API_BASE}/api/equipment`)
+    apiFetch(`${API_BASE}/api/equipment?page=1&pageSize=100`)
       .then(res => res.ok ? res.json() : Promise.reject())
-      .then((data: EquipmentData[]) => {
-        setTotalItems(data.length);
-        setCategories(new Set(data.map(e => e.type)).size);
+      .then((data: { items: EquipmentData[]; totalCount: number }) => {
+        setTotalItems(data.totalCount);
+        setCategories(new Set((data.items ?? []).map(e => e.type)).size);
       })
       .catch(() => {});
 
-    apiFetch(`${API_BASE}/api/requests/all`)
+    apiFetch(`${API_BASE}/api/requests/all?page=1&pageSize=100`)
       .then(res => res.ok ? res.json() : Promise.reject())
-      .then((data: RequestData[]) => {
-        setPendingRequests(data.filter(r => r.status.toLowerCase() === 'pending').length);
-        setOverdueItems(data.filter(isOverdueRequest).length);
-        setRecentRequests(data.slice(0, 5));
-        setLatestActions(buildActions(data));
+      .then((data: { items: RequestData[]; totalCount: number }) => {
+        const items = data.items ?? [];
+        setPendingRequests(items.filter(r => r.status.toLowerCase() === 'pending').length);
+        setOverdueItems(items.filter(isOverdueRequest).length);
+        setRecentRequests(items.slice(0, 5));
+        setLatestActions(buildActions(items));
       })
       .catch(() => {});
   }, [buildActions, isOverdueRequest]);
