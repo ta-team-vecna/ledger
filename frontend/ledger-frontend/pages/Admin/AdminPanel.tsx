@@ -87,6 +87,20 @@ const AdminPanel = () => {
     return `${days} day${days !== 1 ? 's' : ''} ago`;
   }, []);
 
+  const isOverdueRequest = useCallback((req: RequestData) => {
+    const status = req.status.replace(/\s/g, '').toLowerCase();
+    if (status === 'overdue') return true;
+    if (status !== 'approved' && status !== 'checkedout') return false;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const end = new Date(req.requestedToUtc);
+    end.setHours(0, 0, 0, 0);
+
+    return today > end;
+  }, []);
+
   const buildActions = useCallback((requests: RequestData[]) => {
     const actions: ActionItem[] = [];
 
@@ -101,7 +115,7 @@ const AdminPanel = () => {
         });
       }
 
-      if (req.status.toLowerCase() === 'overdue') {
+      if (isOverdueRequest(req)) {
         actions.push({
           icon: 'error',
           iconColor: '#dc2626',
@@ -123,7 +137,7 @@ const AdminPanel = () => {
     });
 
     return actions.sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
-  }, [formatTimeAgo]);
+  }, [formatTimeAgo, isOverdueRequest]);
 
   useEffect(() => {
     apiFetch(`${API_BASE}/api/users`)
@@ -146,12 +160,12 @@ const AdminPanel = () => {
       .then(res => res.ok ? res.json() : Promise.reject())
       .then((data: RequestData[]) => {
         setPendingRequests(data.filter(r => r.status.toLowerCase() === 'pending').length);
-        setOverdueItems(data.filter(r => r.status.toLowerCase() === 'overdue').length);
+        setOverdueItems(data.filter(isOverdueRequest).length);
         setRecentRequests(data.slice(0, 5));
         setLatestActions(buildActions(data));
       })
       .catch(() => {});
-  }, [buildActions]);
+  }, [buildActions, isOverdueRequest]);
 
   const handleLogout = async () => {
     setAnchorEl(null);
@@ -165,6 +179,7 @@ const AdminPanel = () => {
     if (s === 'overdue') return styles.statusOverdue;
     if (s === 'checkedout') return styles.statusBorrowed;
     if (s === 'returned') return styles.statusReturned;
+    if (s === 'rejected') return styles.statusRejected;
     if (s === 'approved') return styles.statusApproved;
     return '';
   };
@@ -294,7 +309,10 @@ const AdminPanel = () => {
                       <td colSpan={4} className={styles.emptyState}>No requests yet.</td>
                     </tr>
                   ) : (
-                    recentRequests.map(req => (
+                    recentRequests.map(req => {
+                      const overdue = isOverdueRequest(req);
+
+                      return (
                       <tr key={req.id}>
                         <td>
                           <div className={styles.itemCell}>
@@ -304,14 +322,15 @@ const AdminPanel = () => {
                         </td>
                         <td>{req.userFullName}</td>
                         <td>
-                          <span className={`${styles.statusBadge} ${getStatusClass(req.status)}`}>
+                          <span className={`${styles.statusBadge} ${overdue ? styles.statusOverdue : getStatusClass(req.status)}`}>
                             <span className={styles.statusDot} />
-                            {getStatusLabel(req.status)}
+                            {overdue ? 'OVERDUE' : getStatusLabel(req.status)}
                           </span>
                         </td>
                         <td>{formatTimeAgo(req.requestedAtUtc)}</td>
                       </tr>
-                    ))
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -319,7 +338,7 @@ const AdminPanel = () => {
           </div>
 
           <div className={styles.card}>
-            <div className={styles.cardHeader}>
+            <div className={`${styles.cardHeader} ${styles.systemStatusHeader}`}>
               <h2>System Status</h2>
             </div>
             <div className={styles.systemStatusList}>
