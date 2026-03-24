@@ -96,10 +96,13 @@
 .submitButton {
   background-color: var(--accent-color) !important;
   min-width: 140px;
+  color: #ffffff !important;
+  font-weight: 600 !important;
 }
 
 .submitButton:disabled {
-  background-color: #ccc !important;
+  background-color: #e5e7eb !important;
+  color: #64748b !important;
 }
 
 /* Responsive */
