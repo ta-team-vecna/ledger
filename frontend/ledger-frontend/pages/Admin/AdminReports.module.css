@@ -343,3 +343,74 @@
     width: 100%;
   }
 }
+
+.userSectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 16px;
+  position: relative;
+}
+
+.leftSection {
+  flex: 1;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.userSectionHeader h3 {
+  color: var(--accent-color);
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  text-align: center;
+  flex: 0 1 auto;
+}
+
+.rightSection {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.timeRangeControls {
+  display: flex;
+}
+
+.userExportButtons {
+  display: flex;
+  gap: 8px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .userSectionHeader {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .leftSection,
+  .rightSection {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .userSectionHeader h3 {
+    order: -1;
+  }
+}
+
+@media (max-width: 600px) {
+  .timeRangeControls ButtonGroup {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .userExportButtons {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}

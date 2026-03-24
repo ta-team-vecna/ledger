@@ -541,7 +541,7 @@ const getPDFLabel = () => {
       {getPDFLabel()}
     </Button>
   </div>
-</div>
+</div>  
 
        
        {/* Equipment Mode - Side by Side Layout */}
@@ -685,53 +685,57 @@ const getPDFLabel = () => {
   {/* User Registration Section with Export */}
 <div id="user-registration-chart" className={styles.userSection}>
   <div className={styles.userSectionHeader}>
+    <div className={styles.leftSection}>
+      <div className={styles.timeRangeControls}>
+        <ButtonGroup size="small" variant="outlined">
+          <Button
+            variant={timeRange === 'week' ? 'contained' : 'outlined'}
+            onClick={() => setTimeRange('week')}
+          >
+            7 Days
+          </Button>
+          <Button
+            variant={timeRange === 'month' ? 'contained' : 'outlined'}
+            onClick={() => setTimeRange('month')}
+          >
+            30 Days
+          </Button>
+          <Button
+            variant={timeRange === 'year' ? 'contained' : 'outlined'}
+            onClick={() => setTimeRange('year')}
+          >
+            12 Months
+          </Button>
+        </ButtonGroup>
+      </div>
+    </div>
+    
     <h3>User Registrations by {timeRange === 'year' ? 'Month' : 'Day'}</h3>
-    <div className={styles.userExportButtons}>
-      <Button
-        size="small"
-        variant="outlined"
-        startIcon={<Icon>download</Icon>}
-        onClick={() => exportUsersCSV()}
-      >
-        {timeRange === 'week' && 'Last 7 Days CSV'}
-        {timeRange === 'month' && 'Last 30 Days CSV'}
-        {timeRange === 'year' && 'Last 12 Months CSV'}
-      </Button>
-      <Button
-        size="small"
-        variant="outlined"
-        startIcon={<Icon>print</Icon>}
-        onClick={() => exportUsersPDF()}
-      >
-       Export as PDF 
-      </Button>
+    
+    <div className={styles.rightSection}>
+      <div className={styles.userExportButtons}>
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<Icon>download</Icon>}
+          onClick={() => exportUsersCSV()}
+        >
+          {timeRange === 'week' && 'Last 7 Days CSV'}
+          {timeRange === 'month' && 'Last 30 Days CSV'}
+          {timeRange === 'year' && 'Last 12 Months CSV'}
+        </Button>
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<Icon>print</Icon>}
+          onClick={() => exportUsersPDF()}
+        >
+          Export as PDF 
+        </Button>
+      </div>
     </div>
   </div>
 </div>
-  
-    {/* Time Range Selector */}
-    <div className={styles.timeRangeControls}>
-      <ButtonGroup size="small" variant="outlined">
-        <Button
-          variant={timeRange === 'week' ? 'contained' : 'outlined'}
-          onClick={() => setTimeRange('week')}
-        >
-          7 Days
-        </Button>
-        <Button
-          variant={timeRange === 'month' ? 'contained' : 'outlined'}
-          onClick={() => setTimeRange('month')}
-        >
-          30 Days
-        </Button>
-        <Button
-          variant={timeRange === 'year' ? 'contained' : 'outlined'}
-          onClick={() => setTimeRange('year')}
-        >
-          12 Months
-        </Button>
-      </ButtonGroup>
-    </div>
 
   {/* Chart */}
   {userChartData.length === 0 ? (
