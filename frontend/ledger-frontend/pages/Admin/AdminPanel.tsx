@@ -54,7 +54,7 @@ interface ActionItem {
 const adminNavItems: NavItem[] = [
   { text: 'Main Panel', icon: 'dashboard', path: '/admin' },
   { text: 'Requests', icon: 'description', path: '/admin/requests', hasChevron: true },
-  { text: 'Latest Actions', icon: 'history', path: '/admin', hasChevron: true },
+  { text: 'Latest Actions', icon: 'history', path: '/admin/latest-actions', hasChevron: true },
   { text: 'Users', icon: 'people', path: '/admin/users', hasChevron: true },
   { text: 'Items', icon: 'inventory_2', path: '/admin/inventory', hasChevron: true },
   { text: 'Reports', icon: 'bar_chart', path: '/admin/reports', hasChevron: true },
@@ -386,7 +386,7 @@ const AdminPanel = () => {
           <div className={styles.card}>
             <div className={styles.cardHeader}>
               <h2>Latest Actions</h2>
-              <button className={styles.viewAllBtn}>View All &rarr;</button>
+              <button className={styles.viewAllBtn} onClick={() => navigate('/admin/latest-actions')}>View All &rarr;</button>
             </div>
             <div className={styles.actionsList}>
               {latestActions.length === 0 ? (
