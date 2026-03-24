@@ -1,6 +1,7 @@
 ﻿using Ledger.Api.Data;
 using Ledger.Api.Domain;
 using Ledger.Api.Dto;
+using Ledger.Api.Dto.Equipment;
 using Ledger.Api.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,19 +23,23 @@ public sealed class EquipmentController : ControllerBase {
     /// Retrieves a complete list of all equipment.
     /// </summary>
     /// <returns>A collection of equipment records ordered by name.</returns>
+    /// <param name="pagination">Pagination parameters (page, pageSize — default 20, max 100).</param>
     /// <response code="200">Returns the list of equipment.</response>
     /// <response code="401">If the user is not authenticated.</response>
     [HttpGet]
-    [ProducesResponseType(typeof(IReadOnlyList<EquipmentResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PaginatedResponse<EquipmentResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<IReadOnlyList<EquipmentResponse>>> GetAll() {
-        var items = await _db.Equipment
-            .AsNoTracking()
-            .OrderBy(x => x.Name)
+    public async Task<ActionResult<PaginatedResponse<EquipmentResponse>>> GetAll([FromQuery] PaginationParams pagination) {
+        var query = _db.Equipment.AsNoTracking().OrderBy(x => x.Name);
+
+        var totalCount = await query.CountAsync();
+        var items = await query
+            .Skip(pagination.Skip)
+            .Take(pagination.ValidPageSize)
             .Select(x => ResponseFromEntity(x))
             .ToListAsync();
 
-        return Ok(items);
+        return Ok(new PaginatedResponse<EquipmentResponse>(items, totalCount, pagination.ValidPage, pagination.ValidPageSize));
     }
 
     /// <summary>
@@ -242,6 +247,56 @@ public sealed class EquipmentController : ControllerBase {
         }
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// Retrieves the full borrowing history for a specific equipment item.
+    /// </summary>
+    /// <param name="id">The unique identifier of the equipment.</param>
+    /// <returns>A list of all requests (borrowing history) for this equipment.</returns>
+    /// <response code="200">Returns the borrowing history.</response>
+    /// <param name="pagination">Pagination parameters (page, pageSize).</param>
+    /// <response code="404">If the equipment could not be found.</response>
+    /// <response code="401">If the user is not authenticated.</response>
+    [HttpGet("{id:guid}/history")]
+    [ProducesResponseType(typeof(PaginatedResponse<EquipmentRequestResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<PaginatedResponse<EquipmentRequestResponse>>> GetHistory(Guid id, [FromQuery] PaginationParams pagination) {
+        var exists = await _db.Equipment.AnyAsync(x => x.Id == id);
+        if (!exists) {
+            return NotFound(ApiErrors.NotFound("Equipment was not found."));
+        }
+
+        var query = _db.EquipmentRequests
+            .AsNoTracking()
+            .Where(r => r.EquipmentId == id)
+            .OrderByDescending(r => r.RequestedAtUtc);
+
+        var totalCount = await query.CountAsync();
+        var history = await query
+            .Skip(pagination.Skip)
+            .Take(pagination.ValidPageSize)
+            .Select(r => new EquipmentRequestResponse(
+                r.Id,
+                r.UserId,
+                r.User.FullName,
+                r.EquipmentId,
+                r.Equipment.Name,
+                r.Equipment.SerialNumber,
+                r.Status.ToString(),
+                r.RequestedAtUtc,
+                r.RequestedFromUtc,
+                r.RequestedToUtc,
+                r.ReviewedAtUtc,
+                r.CheckedOutAtUtc,
+                r.ReturnedAtUtc,
+                r.AdminComment,
+                r.ReturnConditionNotes
+            ))
+            .ToListAsync();
+
+        return Ok(new PaginatedResponse<EquipmentRequestResponse>(history, totalCount, pagination.ValidPage, pagination.ValidPageSize));
     }
 
     private static EquipmentResponse ResponseFromEntity(Equipment x) => new(
