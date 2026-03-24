@@ -68,8 +68,9 @@ const RequestModal = ({ open, onClose, onRequestSubmitted, preselectedEquipmentI
         const response = await apiFetch(`${API_BASE}/api/equipment`);
         if (!response.ok) throw new Error('Failed to fetch equipment');
         const data = await response.json();
+        const equipmentItems: Equipment[] = Array.isArray(data) ? data : (data.items ?? []);
         // Exclude permanently unavailable items; users can still request items with future reservations
-        const bookable = data.filter((item: Equipment) => {
+        const bookable = equipmentItems.filter((item: Equipment) => {
           const s = item.status.toLowerCase();
           return s !== 'underrepair' && s !== 'retired';
         });
