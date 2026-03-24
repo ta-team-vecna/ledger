@@ -76,6 +76,9 @@ const RequestsTable = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (user) fetchRequests(page); }, [user, page]);
 
+  // Reset to page 1 when filter changes
+  useEffect(() => { setPage(1); }, [statusFilter]);
+
   // Compute display status (handles overdue derivation from Approved/CheckedOut)
   const getStatusDisplay = (req: Request) => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -268,9 +271,9 @@ const RequestsTable = () => {
         )}
 
         <div className={styles.footer}>
-          Showing {filteredRequests.length} of {requests.length} on this page
+          Showing {filteredRequests.length} of {statusFilter === 'all' ? totalCount : filteredRequests.length} {statusFilter !== 'all' ? '(filtered)' : ''}
         </div>
-        <Pagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={PAGE_SIZE} onPageChange={setPage} />
+        <Pagination page={page} totalPages={statusFilter !== 'all' ? 1 : totalPages} totalCount={totalCount} pageSize={PAGE_SIZE} onPageChange={setPage} />
       </div>
 
       {/* Details Dialog */}
@@ -335,7 +338,7 @@ const RequestsTable = () => {
                     disabled={actionLoading}
                     startIcon={<Icon>assignment_return</Icon>}
                   >
-                    Return Early
+                    {getStatusDisplay(selectedRequest).key === 'Overdue' ? 'Return' : 'Return Early'}
                   </Button>
                 )}
               </DialogActions>

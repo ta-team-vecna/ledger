@@ -22,7 +22,7 @@ const userBaseNavItems: NavItem[] = [
 const adminNavItems: NavItem[] = [
   { text: 'Main Panel', icon: 'dashboard', path: '/admin' },
   { text: 'Requests', icon: 'description', path: '/admin/requests', hasChevron: true },
-  { text: 'Latest Actions', icon: 'history', path: '/admin', hasChevron: true },
+  { text: 'Latest Actions', icon: 'history', path: '/admin/latest-actions', hasChevron: true },
   { text: 'Users', icon: 'people', path: '/admin/users', hasChevron: true },
   { text: 'Items', icon: 'inventory_2', path: '/admin/inventory', hasChevron: true },
   { text: 'Reports', icon: 'bar_chart', path: '/admin/reports', hasChevron: true },

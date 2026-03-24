@@ -85,8 +85,13 @@ const UserInventory = () => {
     fetchEquipment();
   }, [page]);
 
+  // Reset to page 1 when filters change
+  useEffect(() => { setPage(1); }, [statusFilter, searchTerm, typeFilter, locationFilter]);
+
   const types = ['all', ...Array.from(new Set(equipment.map(e => e.type)))];
   const locations = ['all', ...Array.from(new Set(equipment.map(e => e.location)))];
+
+  const hasActiveFilter = statusFilter !== 'all' || searchTerm !== '' || typeFilter !== 'all' || locationFilter !== 'all';
 
   const filtered = equipment.filter(item => {
     const matchesSearch =
@@ -295,7 +300,7 @@ const UserInventory = () => {
         )}
       </div>
 
-      <Pagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={PAGE_SIZE} onPageChange={setPage} />
+      <Pagination page={page} totalPages={hasActiveFilter ? 1 : totalPages} totalCount={totalCount} pageSize={PAGE_SIZE} onPageChange={setPage} />
 
       {/* Modals */}
       <RequestModal

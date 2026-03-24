@@ -84,7 +84,11 @@ const AdminRequests = () => {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchRequests(page); }, [page]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => { setPage(1); }, [statusFilter, searchTerm]);
 
   // Derive display status from backend status + dates (same logic as user's page)
   const getStatusDisplay = (req: EquipmentRequest) => {
@@ -178,6 +182,8 @@ const AdminRequests = () => {
       year: 'numeric', month: 'short', day: 'numeric',
       hour: '2-digit', minute: '2-digit'
     });
+
+  const hasActiveFilter = statusFilter !== 'all' || searchTerm !== '';
 
   // Filter by derived status key + search
   const filteredRequests = requests.filter(req => {
@@ -338,7 +344,7 @@ const AdminRequests = () => {
         </div>
 
         <div className={styles.footer}>
-          <span>Showing {filteredRequests.length} of {requests.length} on this page</span>
+          <span>Showing {filteredRequests.length} of {hasActiveFilter ? filteredRequests.length : totalCount}{hasActiveFilter ? ' (filtered)' : ''}</span>
           {statusFilter !== 'all' && (
             <Chip
               size="small"
@@ -348,7 +354,7 @@ const AdminRequests = () => {
             />
           )}
         </div>
-        <Pagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={PAGE_SIZE} onPageChange={setPage} />
+        <Pagination page={page} totalPages={hasActiveFilter ? 1 : totalPages} totalCount={totalCount} pageSize={PAGE_SIZE} onPageChange={setPage} />
       </div>
 
       {/* Request Details Dialog */}
