@@ -19,6 +19,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import styles from './AdminInventory.module.css';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 import { apiFetch, API_BASE } from '../../src/utils/apiFetch';
+import Pagination from '../../components/Pagination/Pagination';
 import Tooltip from '@mui/material/Tooltip'; 
 import AddItemModal from '../../components/Admin/addItemModal';
 
@@ -58,6 +59,10 @@ const AdminInventory = () => {
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const PAGE_SIZE = 20;
   
   // Modal State
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -68,20 +73,22 @@ const AdminInventory = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [activeItem, setActiveItem] = useState<string | null>(null);
 
-  // Fetch all data
-  const fetchData = async () => {
+  // Fetch all data — equipment is paginated; requests use large pageSize as cross-reference
+  const fetchData = async (currentPage = page) => {
     setLoading(true);
     try {
       const [equipRes, reqRes] = await Promise.all([
-        apiFetch(`${API_BASE}/api/equipment`),
-        apiFetch(`${API_BASE}/api/requests/all`)
+        apiFetch(`${API_BASE}/api/equipment?page=${currentPage}&pageSize=${PAGE_SIZE}`),
+        apiFetch(`${API_BASE}/api/requests/all?page=1&pageSize=100`)
       ]);
-      
+
       const equipData = await equipRes.json();
       const reqData = await reqRes.json();
-      
-      setEquipment(equipData);
-      setRequests(Array.isArray(reqData) ? reqData : Object.values(reqData));
+
+      setEquipment(equipData.items ?? []);
+      setTotalPages(equipData.totalPages ?? 1);
+      setTotalCount(equipData.totalCount ?? 0);
+      setRequests(reqData.items ?? []);
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {
@@ -197,9 +204,8 @@ const getDisplayStatus = (item: Equipment): string => {
     return { allowed: true };
   };
 
-  useEffect(() => {
-  fetchData();
-}, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchData(page); }, [page]);
 
   // Handle status change
   const handleStatusChange = async (action: string) => {
@@ -563,13 +569,14 @@ const getDisplayStatus = (item: Equipment): string => {
 
         {/* Footer */}
         <div className={styles.tableFooter}>
-          <span>Showing {filteredItems.length} of {displayItems.length} items</span>
+          <span>Showing {filteredItems.length} of {equipment.length} on this page</span>
           {selectedItems.length > 0 && (
             <span className={styles.selectedCount}>
               {selectedItems.length} selected
             </span>
           )}
         </div>
+        <Pagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={PAGE_SIZE} onPageChange={setPage} />
       </div>
 
       {/* Modals */}

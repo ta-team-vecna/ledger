@@ -64,8 +64,8 @@ public sealed class AuthController : ControllerBase {
 
         var user = new ApplicationUser {
             Id = Guid.NewGuid(),
-            FirstName = request.FirstName.Trim(),
-            LastName = request.LastName.Trim(),
+            FirstName = Utilities.InputValidator.Sanitize(request.FirstName),
+            LastName = Utilities.InputValidator.Sanitize(request.LastName),
             Email = email,
             Role = UserRole.User,
         };

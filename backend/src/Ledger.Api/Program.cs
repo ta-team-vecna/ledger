@@ -20,7 +20,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddCors(options => {
     options.AddPolicy("Frontend", policy => {
         policy
-            .WithOrigins("http://localhost:5173")
+            .SetIsOriginAllowed(_ => true)
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials();
@@ -79,6 +79,21 @@ if (app.Environment.IsDevelopment()) {
 
 app.UseCors("Frontend");
 app.UseHttpsRedirection();
+
+// Return descriptive 403 Forbidden responses instead of empty bodies
+app.Use(async (context, next) => {
+    await next();
+    if (context.Response.StatusCode == StatusCodes.Status403Forbidden
+        && !context.Response.HasStarted) {
+        context.Response.ContentType = "application/problem+json";
+        await context.Response.WriteAsJsonAsync(new Microsoft.AspNetCore.Mvc.ProblemDetails {
+            Title = "Forbidden",
+            Detail = "You do not have permission to access this resource. Admin privileges are required.",
+            Status = StatusCodes.Status403Forbidden,
+        });
+    }
+});
+
 app.UseAuthentication();
 app.UseAuthorization();
 

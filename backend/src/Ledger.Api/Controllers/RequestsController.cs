@@ -50,77 +50,103 @@ public sealed class RequestsController : ControllerBase {
     /// <summary>
     /// Retrieves all equipment requests made by the currently authenticated user.
     /// </summary>
-    /// <returns>A list of the current user's equipment requests.</returns>
-    /// <response code="200">Returns the list of requests.</response>
+    /// <param name="pagination">Pagination parameters (page, pageSize — default 20, max 100).</param>
+    /// <returns>A paginated list of the current user's equipment requests.</returns>
+    /// <response code="200">Returns the paginated list of requests.</response>
     /// <response code="401">If the user is not authenticated.</response>
     [HttpGet("me")]
-    [ProducesResponseType(typeof(IEnumerable<EquipmentRequestResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PaginatedResponse<EquipmentRequestResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<IEnumerable<EquipmentRequestResponse>>> GetMyRequests() {
+    public async Task<ActionResult<PaginatedResponse<EquipmentRequestResponse>>> GetMyRequests([FromQuery] PaginationParams pagination) {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (userIdClaim is null) {
             return Unauthorized(ApiErrors.Unauthorized);
         }
 
         var userId = Guid.Parse(userIdClaim);
-        var requests = await _db.EquipmentRequests
+        var query = _db.EquipmentRequests
             .AsNoTracking()
             .Where(x => x.UserId == userId)
-            .OrderByDescending(x => x.RequestedAtUtc)
+            .OrderByDescending(x => x.RequestedAtUtc);
+
+        var totalCount = await query.CountAsync();
+        var requests = await query
+            .Skip(pagination.Skip)
+            .Take(pagination.ValidPageSize)
             .Select(ResponseFromEntity)
             .ToListAsync();
 
-        return Ok(requests);
+        return Ok(new PaginatedResponse<EquipmentRequestResponse>(requests, totalCount, pagination.ValidPage, pagination.ValidPageSize));
     }
 
     /// <summary>
     /// Retrieves equipment requests filtered by status.
     /// </summary>
-    /// <param name="status">The optional status to filter requests by.</param>
-    /// <returns>A list of filtered equipment requests.</returns>
-    /// <response code="200">Returns the filtered list of requests.</response>
+    /// <param name="status">The optional status to filter requests by (e.g. Pending, Approved, CheckedOut).</param>
+    /// <param name="pagination">Pagination parameters (page, pageSize — default 20, max 100).</param>
+    /// <returns>A paginated list of filtered equipment requests.</returns>
+    /// <response code="200">Returns the paginated filtered list of requests.</response>
+    /// <response code="400">If the provided status value is not valid.</response>
     /// <response code="401">If the user is not authenticated.</response>
     /// <response code="403">If the user does not have StrictAdmin privileges.</response>
     [HttpGet("filtered")]
     [Authorize(Policy = "StrictAdmin")]
-    [ProducesResponseType(typeof(IEnumerable<EquipmentRequestResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PaginatedResponse<EquipmentRequestResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<ActionResult<IEnumerable<EquipmentRequestResponse>>> GetFilteredRequests(
-        [FromQuery] RequestStatus? status = null
+    public async Task<ActionResult<PaginatedResponse<EquipmentRequestResponse>>> GetFilteredRequests(
+        [FromQuery] string? status = null,
+        [FromQuery] PaginationParams? pagination = null
     ) {
+        pagination ??= new PaginationParams();
         var query = _db.EquipmentRequests.AsNoTracking().AsQueryable();
-        if (status.HasValue) {
-            query = query.Where(x => x.Status == status.Value);
+
+        if (!string.IsNullOrWhiteSpace(status)) {
+            if (!Enum.TryParse<RequestStatus>(status, ignoreCase: true, out var parsedStatus)) {
+                var validValues = string.Join(", ", Enum.GetNames<RequestStatus>());
+                return BadRequest(ApiErrors.BadRequest("Invalid status",
+                    $"'{status}' is not a valid status. Valid values: {validValues}"));
+            }
+            query = query.Where(x => x.Status == parsedStatus);
         }
 
-        var requests = await query
-            .OrderByDescending(x => x.RequestedAtUtc)
+        var orderedQuery = query.OrderByDescending(x => x.RequestedAtUtc);
+        var totalCount = await orderedQuery.CountAsync();
+        var requests = await orderedQuery
+            .Skip(pagination.Skip)
+            .Take(pagination.ValidPageSize)
             .Select(ResponseFromEntity)
             .ToListAsync();
 
-        return Ok(requests);
+        return Ok(new PaginatedResponse<EquipmentRequestResponse>(requests, totalCount, pagination.ValidPage, pagination.ValidPageSize));
     }
 
     /// <summary>
     /// Retrieves a complete list of all equipment requests in the system.
     /// </summary>
-    /// <returns>A list of all equipment requests.</returns>
-    /// <response code="200">Returns the list of all requests.</response>
+    /// <param name="pagination">Pagination parameters (page, pageSize — default 20, max 100).</param>
+    /// <returns>A paginated list of all equipment requests.</returns>
+    /// <response code="200">Returns the paginated list of all requests.</response>
     /// <response code="401">If the user is not authenticated.</response>
     /// <response code="403">If the user does not have StrictAdmin privileges.</response>
     [HttpGet("all")]
     [Authorize(Policy = "StrictAdmin")]
-    [ProducesResponseType(typeof(IEnumerable<EquipmentRequestResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PaginatedResponse<EquipmentRequestResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<ActionResult<IEnumerable<EquipmentRequestResponse>>> GetAllRequests() {
-        var requests = await _db.EquipmentRequests.AsNoTracking()
-            .OrderByDescending(x => x.RequestedAtUtc)
+    public async Task<ActionResult<PaginatedResponse<EquipmentRequestResponse>>> GetAllRequests([FromQuery] PaginationParams pagination) {
+        var query = _db.EquipmentRequests.AsNoTracking()
+            .OrderByDescending(x => x.RequestedAtUtc);
+
+        var totalCount = await query.CountAsync();
+        var requests = await query
+            .Skip(pagination.Skip)
+            .Take(pagination.ValidPageSize)
             .Select(ResponseFromEntity)
             .ToListAsync();
 
-        return Ok(requests);
+        return Ok(new PaginatedResponse<EquipmentRequestResponse>(requests, totalCount, pagination.ValidPage, pagination.ValidPageSize));
     }
 
     /// <summary>
@@ -218,8 +244,17 @@ public sealed class RequestsController : ControllerBase {
             return BadRequest(ApiErrors.BadRequest("Invalid state", "Only pending requests can be approved."));
         }
 
-        if (request.Equipment.Status != EquipmentStatus.Available) {
-            return Conflict(ApiErrors.Conflict("Equipment is not currently available."));
+        // Check for overlapping approved/checked-out reservations for the same equipment
+        var hasOverlap = await _db.EquipmentRequests.AnyAsync(x =>
+            x.EquipmentId == request.EquipmentId
+            && x.Id != request.Id
+            && (x.Status == RequestStatus.Approved || x.Status == RequestStatus.CheckedOut)
+            && x.RequestedFromUtc < request.RequestedToUtc
+            && x.RequestedToUtc > request.RequestedFromUtc);
+
+        if (hasOverlap) {
+            return Conflict(ApiErrors.Conflict(
+                "Cannot approve: another reservation already exists for this equipment during the requested period."));
         }
 
         var adminIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -231,7 +266,7 @@ public sealed class RequestsController : ControllerBase {
         request.ReviewedAtUtc = DateTime.UtcNow;
         request.Status = RequestStatus.Approved;
         request.Equipment.Status = EquipmentStatus.Reserved;
-        request.AdminComment = payload?.Comment;
+        request.AdminComment = payload?.Comment is not null ? InputValidator.Sanitize(payload.Comment) : null;
 
         await _db.SaveChangesAsync();
 
@@ -276,7 +311,7 @@ public sealed class RequestsController : ControllerBase {
         request.ReviewedByAdminId = Guid.Parse(adminIdClaim);
         request.ReviewedAtUtc = DateTime.UtcNow;
         request.Status = RequestStatus.Rejected;
-        request.AdminComment = payload?.Comment;
+        request.AdminComment = payload?.Comment is not null ? InputValidator.Sanitize(payload.Comment) : null;
 
         await _db.SaveChangesAsync();
 
@@ -328,7 +363,7 @@ public sealed class RequestsController : ControllerBase {
         }
 
         request.ReturnedAtUtc = DateTime.UtcNow;
-        request.ReturnConditionNotes = payload.ReturnConditionNotes;
+        request.ReturnConditionNotes = InputValidator.Sanitize(payload.ReturnConditionNotes ?? string.Empty);
         request.Status = RequestStatus.Returned;
         if (payload.WantsRepair) {
             request.Equipment.Status = EquipmentStatus.UnderRepair;

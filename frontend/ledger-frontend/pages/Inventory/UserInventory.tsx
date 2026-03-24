@@ -14,6 +14,7 @@ import styles from './UserInventory.module.css';
 import RequestModal from '../../components/modals/RequestModal';
 import EquipmentDetailsModal from '../../components/modals/EquipmentDetailsModal';
 import { apiFetch, API_BASE } from '../../src/utils/apiFetch';
+import Pagination from '../../components/Pagination/Pagination';
 
 interface Equipment {
   id: string;
@@ -56,6 +57,10 @@ const UserInventory = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [locationFilter, setLocationFilter] = useState('all');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const PAGE_SIZE = 20;
 
   const [requestModalOpen, setRequestModalOpen] = useState(false);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
@@ -65,10 +70,12 @@ const UserInventory = () => {
     const fetchEquipment = async () => {
       setLoading(true);
       try {
-        const res = await apiFetch(`${API_BASE}/api/equipment`);
+        const res = await apiFetch(`${API_BASE}/api/equipment?page=${page}&pageSize=${PAGE_SIZE}`);
         if (!res.ok) throw new Error('Failed to fetch equipment');
         const data = await res.json();
-        setEquipment(data);
+        setEquipment(data.items ?? []);
+        setTotalPages(data.totalPages ?? 1);
+        setTotalCount(data.totalCount ?? 0);
       } catch (err) {
         console.error(err);
       } finally {
@@ -76,7 +83,7 @@ const UserInventory = () => {
       }
     };
     fetchEquipment();
-  }, []);
+  }, [page]);
 
   const types = ['all', ...Array.from(new Set(equipment.map(e => e.type)))];
   const locations = ['all', ...Array.from(new Set(equipment.map(e => e.location)))];
@@ -150,10 +157,10 @@ const UserInventory = () => {
           </FormControl>
 
           <FormControl size="small" className={styles.filterSelect}>
-            <InputLabel>Type</InputLabel>
-            <Select value={typeFilter} label="Type" onChange={e => setTypeFilter(e.target.value)}>
+            <InputLabel>Category</InputLabel>
+            <Select value={typeFilter} label="Category" onChange={e => setTypeFilter(e.target.value)}>
               {types.map(t => (
-                <MenuItem key={t} value={t}>{t === 'all' ? 'All Types' : t}</MenuItem>
+                <MenuItem key={t} value={t}>{t === 'all' ? 'All Categories' : t}</MenuItem>
               ))}
             </Select>
           </FormControl>
@@ -170,7 +177,7 @@ const UserInventory = () => {
 
         {/* Count */}
         <div className={styles.countBar}>
-          <span>{filtered.length} of {equipment.length} items</span>
+          <span>{filtered.length} of {equipment.length} on this page</span>
           {(statusFilter !== 'all' || typeFilter !== 'all' || locationFilter !== 'all' || searchTerm) && (
             <Button
               size="small"
@@ -287,6 +294,8 @@ const UserInventory = () => {
           </div>
         )}
       </div>
+
+      <Pagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={PAGE_SIZE} onPageChange={setPage} />
 
       {/* Modals */}
       <RequestModal

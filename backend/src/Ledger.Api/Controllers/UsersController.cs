@@ -1,6 +1,7 @@
 ﻿using Ledger.Api.Data;
 using Ledger.Api.Domain;
 using Ledger.Api.Dto;
+using Ledger.Api.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -23,23 +24,28 @@ public class UsersController : ControllerBase {
     /// <summary>
     /// Retrieves a complete list of all users in the system.
     /// </summary>
-    /// <returns>A list of user records ordered alphabetically by name.</returns>
-    /// <response code="200">Returns the list of users.</response>
+    /// <param name="pagination">Pagination parameters (page, pageSize — default 20, max 100).</param>
+    /// <returns>A paginated list of user records ordered alphabetically by name.</returns>
+    /// <response code="200">Returns the paginated list of users.</response>
     /// <response code="401">If the user is not authenticated.</response>
     /// <response code="403">If the user does not have StrictAdmin privileges.</response>
     [HttpGet]
-    [ProducesResponseType(typeof(IReadOnlyList<UserResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PaginatedResponse<UserResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<ActionResult<IReadOnlyList<UserResponse>>> GetAll() {
-        var users = await _db.Users
-            .AsNoTracking()
+    public async Task<ActionResult<PaginatedResponse<UserResponse>>> GetAll([FromQuery] PaginationParams pagination) {
+        var query = _db.Users.AsNoTracking()
             .OrderBy(x => x.FirstName)
-            .ThenBy(x => x.LastName)
+            .ThenBy(x => x.LastName);
+
+        var totalCount = await query.CountAsync();
+        var users = await query
+            .Skip(pagination.Skip)
+            .Take(pagination.ValidPageSize)
             .Select(x => ResponseFromEntity(x))
             .ToListAsync();
 
-        return Ok(users);
+        return Ok(new PaginatedResponse<UserResponse>(users, totalCount, pagination.ValidPage, pagination.ValidPageSize));
     }
 
     /// <summary>
@@ -99,8 +105,8 @@ public class UsersController : ControllerBase {
 
         var user = new ApplicationUser {
             Id = Guid.NewGuid(),
-            FirstName = request.FirstName.Trim(),
-            LastName = request.LastName.Trim(),
+            FirstName = InputValidator.Sanitize(request.FirstName),
+            LastName = InputValidator.Sanitize(request.LastName),
             Email = email,
             Role = request.Role,
             CreatedAtUtc = DateTime.UtcNow,
@@ -177,11 +183,11 @@ public class UsersController : ControllerBase {
         }
 
         if (request.FirstName is not null) {
-            user.FirstName = request.FirstName.Trim();
+            user.FirstName = InputValidator.Sanitize(request.FirstName);
         }
 
         if (request.LastName is not null) {
-            user.LastName = request.LastName.Trim();
+            user.LastName = InputValidator.Sanitize(request.LastName);
         }
 
         if (request.Email is not null) {

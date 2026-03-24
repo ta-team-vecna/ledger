@@ -171,6 +171,11 @@
   padding: 20px 24px;
 }
 
+.systemStatusHeader {
+  padding-top: 24px;
+  padding-bottom: 24px;
+}
+
 .cardHeader h2 {
   font-size: 18px;
   font-weight: 700;
@@ -269,6 +274,9 @@
 
 .statusReturned { background-color: #eff6ff; color: #2563eb; }
 .statusReturned .statusDot { background-color: #2563eb; }
+
+.statusRejected { background-color: #fef2f2; color: #dc2626; }
+.statusRejected .statusDot { background-color: #dc2626; }
 
 .statusApproved { background-color: #f0fdf4; color: #16a34a; }
 .statusApproved .statusDot { background-color: #16a34a; }

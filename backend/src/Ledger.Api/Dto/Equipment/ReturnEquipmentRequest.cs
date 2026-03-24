@@ -1,3 +1,11 @@
-﻿namespace Ledger.Api.Dto.Equipment;
+using System.ComponentModel.DataAnnotations;
+using Ledger.Api.Utilities;
 
-public record ReturnEquipmentRequest(string? ReturnConditionNotes, bool WantsRepair);
+namespace Ledger.Api.Dto.Equipment;
+
+public record ReturnEquipmentRequest(
+    [MaxLength(InputValidator.NotesMaxLength)]
+    string? ReturnConditionNotes,
+
+    bool WantsRepair
+);

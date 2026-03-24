@@ -1,15 +1,24 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using Ledger.Api.Domain;
+using Ledger.Api.Utilities;
 
 namespace Ledger.Api.Dto;
 
 public sealed record CreateUserRequest(
-    [Required, MaxLength(100), MinLength(1)]
+    [Required, MaxLength(InputValidator.NameMaxLength), MinLength(1)]
+    [RegularExpression(InputValidator.NamePattern, ErrorMessage = InputValidator.NameErrorMessage)]
     string FirstName,
-    [Required, MaxLength(100), MinLength(1)]
+
+    [Required, MaxLength(InputValidator.NameMaxLength), MinLength(1)]
+    [RegularExpression(InputValidator.NamePattern, ErrorMessage = InputValidator.NameErrorMessage)]
     string LastName,
-    [Required, MaxLength(256), MinLength(1), EmailAddress]
+
+    [Required, MaxLength(InputValidator.EmailMaxLength), MinLength(1)]
+    [RegularExpression(InputValidator.EmailPattern, ErrorMessage = InputValidator.EmailErrorMessage)]
     string Email,
-    [Required, MinLength(6)] string Password,
+
+    [Required, MinLength(InputValidator.PasswordMinLength), MaxLength(InputValidator.PasswordMaxLength)]
+    string Password,
+
     [Required] UserRole Role
 );

@@ -29,4 +29,12 @@ public static class ApiErrors {
             Status = StatusCodes.Status409Conflict,
         };
     }
+
+    public static ProblemDetails Forbidden(string detail) {
+        return new ProblemDetails {
+            Title = "Forbidden",
+            Detail = detail,
+            Status = StatusCodes.Status403Forbidden,
+        };
+    }
 }
