@@ -484,58 +484,64 @@ const getPDFLabel = () => {
         </div>
 
         <div className={styles.exportButtons}>
-      <Button
-  variant="outlined"
-  startIcon={<Icon>download</Icon>}
-  onClick={() => {
-    setExporting('csv');
-    const data = dataMode === 'equipment' 
-      ? prepareEquipmentExportData() 
-      : prepareRequestsExportData();
-    exportToCSV(data, `${dataMode}_report_${new Date().toISOString().split('T')[0]}`);
-    setExporting(null);
-  }}
-  disabled={exporting !== null}
->
-  {getExportLabel()}
-</Button>
-
-<Button
-  variant="outlined"
-  startIcon={<Icon>print</Icon>}
-  onClick={() => {
-    setExporting('pdf');
-    const elementId = dataMode === 'equipment' ? 'equipment-chart' : 'requests-chart';
-    const title = dataMode === 'equipment' ? 'Equipment Report' : 'Requests Report';
-    exportToPDF(elementId, title);
-    setExporting(null);
-  }}
-  disabled={exporting !== null}
->
-  {getPDFLabel()}
-</Button>
+   
 
 </div>
-
+        
         {renderError()}
 
         {/* Mode Selector */}
         <div className={styles.controls}>
-          <ButtonGroup variant="outlined" className={styles.modeGroup}>
-            <Button
-              variant={dataMode === 'equipment' ? 'contained' : 'outlined'}
-              onClick={() => setDataMode('equipment')}
-            >
-              Equipment
-            </Button>
-            <Button
-              variant={dataMode === 'requests' ? 'contained' : 'outlined'}
-              onClick={() => setDataMode('requests')}
-            >
-              Requests
-            </Button>
-          </ButtonGroup>
-        </div>
+  <div className={styles.controlsLeft}>
+    <ButtonGroup variant="outlined" className={styles.modeGroup}>
+      <Button
+        variant={dataMode === 'equipment' ? 'contained' : 'outlined'}
+        onClick={() => setDataMode('equipment')}
+      >
+        Equipment
+      </Button>
+      <Button
+        variant={dataMode === 'requests' ? 'contained' : 'outlined'}
+        onClick={() => setDataMode('requests')}
+      >
+        Requests
+      </Button>
+    </ButtonGroup>
+  </div>
+  
+  <div className={styles.controlsRight}>
+    <Button
+      variant="outlined"
+      startIcon={<Icon>download</Icon>}
+      onClick={() => {
+        setExporting('csv');
+        const data = dataMode === 'equipment' 
+          ? prepareEquipmentExportData() 
+          : prepareRequestsExportData();
+        exportToCSV(data, `${dataMode}_report_${new Date().toISOString().split('T')[0]}`);
+        setExporting(null);
+      }}
+      disabled={exporting !== null}
+    >
+      {getExportLabel()}
+    </Button>
+
+    <Button
+      variant="outlined"
+      startIcon={<Icon>print</Icon>}
+      onClick={() => {
+        setExporting('pdf');
+        const elementId = dataMode === 'equipment' ? 'equipment-chart' : 'requests-chart';
+        const title = dataMode === 'equipment' ? 'Equipment Report' : 'Requests Report';
+        exportToPDF(elementId, title);
+        setExporting(null);
+      }}
+      disabled={exporting !== null}
+    >
+      {getPDFLabel()}
+    </Button>
+  </div>
+</div>
 
        
        {/* Equipment Mode - Side by Side Layout */}
