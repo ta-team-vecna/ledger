@@ -1,3 +1,9 @@
-﻿namespace Ledger.Api.Dto;
+using System.ComponentModel.DataAnnotations;
+using Ledger.Api.Utilities;
 
-public sealed record ReviewRequest(string? Comment);
+namespace Ledger.Api.Dto;
+
+public sealed record ReviewRequest(
+    [MaxLength(InputValidator.CommentMaxLength)]
+    string? Comment
+);
