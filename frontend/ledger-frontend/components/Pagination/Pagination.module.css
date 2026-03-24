@@ -1,0 +1,13 @@
+.container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 8px 4px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.info {
+  font-size: 13px;
+  color: #64748b;
+}
