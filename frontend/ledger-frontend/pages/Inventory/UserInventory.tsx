@@ -150,10 +150,10 @@ const UserInventory = () => {
           </FormControl>
 
           <FormControl size="small" className={styles.filterSelect}>
-            <InputLabel>Type</InputLabel>
-            <Select value={typeFilter} label="Type" onChange={e => setTypeFilter(e.target.value)}>
+            <InputLabel>Category</InputLabel>
+            <Select value={typeFilter} label="Category" onChange={e => setTypeFilter(e.target.value)}>
               {types.map(t => (
-                <MenuItem key={t} value={t}>{t === 'all' ? 'All Types' : t}</MenuItem>
+                <MenuItem key={t} value={t}>{t === 'all' ? 'All Categories' : t}</MenuItem>
               ))}
             </Select>
           </FormControl>
