@@ -92,6 +92,8 @@ const PageLayout = ({ type, children }: PageLayoutProps) => {
             anchorEl={anchorEl}
             open={Boolean(anchorEl)}
             onClose={() => setAnchorEl(null)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
           >
             <MenuItem onClick={handleLogout}>Logout</MenuItem>
           </Menu>
