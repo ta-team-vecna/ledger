@@ -36,6 +36,12 @@ interface Equipment {
   requiresAdminApproval: boolean;
 }
 
+interface Reservation {
+  fromUtc: string;
+  toUtc: string;
+  status: string;
+}
+
 interface RequestModalProps {
   open: boolean;
   onClose: () => void;
@@ -51,6 +57,8 @@ const RequestModal = ({ open, onClose, onRequestSubmitted, preselectedEquipmentI
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [loadingReservations, setLoadingReservations] = useState(false);
 
   const [formData, setFormData] = useState({
     equipmentId: '',
@@ -88,6 +96,26 @@ const RequestModal = ({ open, onClose, onRequestSubmitted, preselectedEquipmentI
 
     fetchEquipment();
   }, [open, preselectedEquipmentId]);
+
+  // Fetch reservations when equipment selection changes
+  useEffect(() => {
+    if (!formData.equipmentId) {
+      setReservations([]);
+      return;
+    }
+    const fetchReservations = async () => {
+      setLoadingReservations(true);
+      try {
+        const res = await apiFetch(`${API_BASE}/api/equipment/${formData.equipmentId}/reservations`);
+        if (res.ok) setReservations(await res.json());
+      } catch {
+        // silent — reservations are informational only
+      } finally {
+        setLoadingReservations(false);
+      }
+    };
+    fetchReservations();
+  }, [formData.equipmentId]);
 
   // Handle filter change
   const handleFilterChange = (_event: React.MouseEvent<HTMLElement>, newMode: 'all' | 'open' | null) => {
@@ -234,6 +262,7 @@ const RequestModal = ({ open, onClose, onRequestSubmitted, preselectedEquipmentI
       });
       setFieldErrors({});
       setError(null);
+      setReservations([]);
       onClose();
     }
   };
@@ -340,6 +369,28 @@ const RequestModal = ({ open, onClose, onRequestSubmitted, preselectedEquipmentI
                   <FormHelperText error>{fieldErrors.equipmentId}</FormHelperText>
                 )}
               </FormControl>
+
+              {formData.equipmentId && (
+                loadingReservations ? (
+                  <div className={styles.reservationsLoading}>
+                    <CircularProgress size={14} /> Checking availability...
+                  </div>
+                ) : reservations.length === 0 ? (
+                  <Alert severity="success" className={styles.reservationsAlert}>
+                    All dates available for this item.
+                  </Alert>
+                ) : (
+                  <Alert severity="info" className={styles.reservationsAlert}>
+                    <strong>Existing reservations:</strong>
+                    {reservations.map((r, i) => (
+                      <div key={i}>
+                        {new Date(r.fromUtc).toLocaleDateString()} — {new Date(r.toUtc).toLocaleDateString()}
+                        <span style={{ marginLeft: 6, opacity: 0.75 }}>({r.status})</span>
+                      </div>
+                    ))}
+                  </Alert>
+                )
+              )}
 
               <DatePicker
                 label="Start Date *"

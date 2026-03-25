@@ -109,45 +109,11 @@ const STATUS_CONFIG: Record<string, { color: string; icon: string; label: string
   'Returned': { color: '#9c27b0', icon: 'assignment_return', label: 'Returned' }
 };
 
-// Status number mapping for API
-const STATUS_NUMBER: Record<string, number> = {
-  'available': 0,
-  'reserved': 1,
-  'borrow': 2,
-  'repair': 3,
-  'retired': 4
-};
-
-  // Calculate display status based on equipment and requests
-const getDisplayStatus = (item: Equipment): string => {
-  // First, trust what the equipment table says about its CURRENT state
-  if (item.status === 'CheckedOut') return 'CheckedOut';
-  if (item.status === 'UnderRepair') return 'UnderRepair';
-  if (item.status === 'Retired') return 'Retired';
-  if (item.status === 'Unavailable') return 'Unavailable';
-  if (item.status === 'Reserved') return 'Reserved';
-  
-  // Only use requests for future/predicted states
-  const itemRequests = requests.filter(r => r.equipmentId === item.id);
-  const activeRequest = itemRequests
-    .sort((a, b) => new Date(b.requestedAtUtc).getTime() - new Date(a.requestedAtUtc).getTime())
-    .find(r => r.status !== 'Returned' && r.status !== 'Rejected');
-
-  if (!activeRequest) return item.status;
-
-  const now = new Date();
-  const start = new Date(activeRequest.requestedFromUtc);
-  const end = new Date(activeRequest.requestedToUtc);
-
-  if (activeRequest.returnedAtUtc) return 'Returned';
-  
-  if (activeRequest.status === 'Approved') {
-    if (now < start) return 'Reserved';
-    if (now > end) return 'Overdue';
-    return 'Available';
-  }
-  
-  return item.status;
+// Status string mapping for API
+const STATUS_STRING: Record<string, string> = {
+  'available': 'Available',
+  'repair': 'UnderRepair',
+  'retired': 'Retired'
 };
   // Get icon for equipment type
   const getTypeIcon = (type: string): string => {
@@ -162,27 +128,14 @@ const getDisplayStatus = (item: Equipment): string => {
     return icons[type] || 'inventory';
   };
 
-  // Check if item can be modified
+  // Check if item can be modified (status is computed server-side)
   const canModifyItem = (itemId: string): { allowed: boolean; reason?: string } => {
     const item = equipment.find(e => e.id === itemId);
     if (!item) return { allowed: false, reason: 'Item not found' };
-
-    const activeRequest = requests.find(r => 
-      r.equipmentId === itemId && 
-      r.status === 'Approved' && 
-      !r.returnedAtUtc
-    );
-
-    if (activeRequest) {
-      const now = new Date();
-      const start = new Date(activeRequest.requestedFromUtc);
-      const end = new Date(activeRequest.requestedToUtc);
-      
-      if (now >= start && now <= end || item.status === "Reserved") {
-        return { allowed: false, reason: 'Item is currently reserved' };
-      }
+    const s = item.status;
+    if (s === 'Reserved' || s === 'CheckedOut' || s === 'Overdue') {
+      return { allowed: false, reason: 'Item is currently in use' };
     }
-
     return { allowed: true };
   };
 
@@ -242,14 +195,14 @@ const getDisplayStatus = (item: Equipment): string => {
       return;
     }
 
-    const statusNumber = STATUS_NUMBER[action];
-    if (statusNumber === undefined) return;
+    const statusString = STATUS_STRING[action];
+    if (statusString === undefined) return;
 
     try {
       const response = await apiFetch(`${API_BASE}/api/equipment/${activeItem}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: statusNumber })
+        body: JSON.stringify({ status: statusString })
       });
 
       if (!response.ok) throw new Error('Failed to update status');
@@ -336,7 +289,7 @@ const getDisplayStatus = (item: Equipment): string => {
     category: item.type,
     name: item.name,
     location: item.location,
-    status: getDisplayStatus(item),
+    status: item.status,
     icon: getTypeIcon(item.type)
   }));
 

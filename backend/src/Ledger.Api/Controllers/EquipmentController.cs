@@ -30,16 +30,18 @@ public sealed class EquipmentController : ControllerBase {
     [ProducesResponseType(typeof(PaginatedResponse<EquipmentResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<PaginatedResponse<EquipmentResponse>>> GetAll([FromQuery] PaginationParams pagination) {
-        var query = _db.Equipment.AsNoTracking().OrderBy(x => x.Name);
+        var query = _db.Equipment.AsNoTracking().Include(e => e.Requests).OrderBy(x => x.Name);
 
         var totalCount = await query.CountAsync();
         var items = await query
             .Skip(pagination.Skip)
             .Take(pagination.ValidPageSize)
-            .Select(x => ResponseFromEntity(x))
             .ToListAsync();
 
-        return Ok(new PaginatedResponse<EquipmentResponse>(items, totalCount, pagination.ValidPage, pagination.ValidPageSize));
+        var now = DateTime.UtcNow;
+        var responses = items.Select(x => ToResponse(x, now)).ToList();
+
+        return Ok(new PaginatedResponse<EquipmentResponse>(responses, totalCount, pagination.ValidPage, pagination.ValidPageSize));
     }
 
     /// <summary>
@@ -57,15 +59,14 @@ public sealed class EquipmentController : ControllerBase {
     public async Task<ActionResult<EquipmentResponse>> GetById(Guid id) {
         var item = await _db.Equipment
             .AsNoTracking()
-            .Where(x => x.Id == id)
-            .Select(x => ResponseFromEntity(x))
-            .FirstOrDefaultAsync();
+            .Include(e => e.Requests)
+            .FirstOrDefaultAsync(x => x.Id == id);
 
         if (item is null) {
             return NotFound(ApiErrors.NotFound("Equipment was not found."));
         }
 
-        return Ok(item);
+        return Ok(ToResponse(item, DateTime.UtcNow));
     }
 
     /// <summary>
@@ -136,7 +137,7 @@ public sealed class EquipmentController : ControllerBase {
         _db.Equipment.Add(entity);
         await _db.SaveChangesAsync();
 
-        var response = ResponseFromEntity(entity);
+        var response = ToResponse(entity, DateTime.UtcNow);
 
         return CreatedAtAction(nameof(GetById), new { id = entity.Id }, response);
     }
@@ -173,7 +174,7 @@ public sealed class EquipmentController : ControllerBase {
 
         await _db.SaveChangesAsync();
 
-        return Ok(ResponseFromEntity(entity));
+        return Ok(ToResponse(entity, DateTime.UtcNow));
     }
 
     /// <summary>
@@ -299,15 +300,33 @@ public sealed class EquipmentController : ControllerBase {
         return Ok(new PaginatedResponse<EquipmentRequestResponse>(history, totalCount, pagination.ValidPage, pagination.ValidPageSize));
     }
 
-    private static EquipmentResponse ResponseFromEntity(Equipment x) => new(
-        x.Id,
-        x.Name,
-        x.Type,
-        x.SerialNumber,
-        x.Condition,
-        x.Status.ToString(),
-        x.Location,
-        x.PhotoUrl,
-        x.RequiresAdminApproval
-    );
+    private static EquipmentResponse ToResponse(Equipment x, DateTime now) =>
+        new(x.Id, x.Name, x.Type, x.SerialNumber, x.Condition,
+            GetEffectiveStatus(x, now), x.Location, x.PhotoUrl, x.RequiresAdminApproval);
+
+    private static string GetEffectiveStatus(Equipment equipment, DateTime now) {
+        if (equipment.Status is EquipmentStatus.UnderRepair or EquipmentStatus.Retired)
+            return equipment.Status.ToString();
+
+        var activeRequests = equipment.Requests?
+            .Where(r => r.Status != RequestStatus.Rejected
+                     && r.Status != RequestStatus.Returned
+                     && r.Status != RequestStatus.Cancelled)
+            .ToList() ?? [];
+
+        var currentRequest = activeRequests
+            .Where(r => r.Status == RequestStatus.Approved || r.Status == RequestStatus.CheckedOut)
+            .FirstOrDefault(r => r.RequestedFromUtc <= now && r.RequestedToUtc >= now);
+
+        if (currentRequest is not null)
+            return currentRequest.Status == RequestStatus.CheckedOut ? "CheckedOut" : "Reserved";
+
+        var overdueRequest = activeRequests
+            .Where(r => r.Status == RequestStatus.Approved || r.Status == RequestStatus.CheckedOut)
+            .FirstOrDefault(r => r.RequestedToUtc < now);
+
+        if (overdueRequest is not null) return "Overdue";
+
+        return "Available";
+    }
 }

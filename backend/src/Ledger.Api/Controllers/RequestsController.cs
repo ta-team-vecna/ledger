@@ -182,8 +182,21 @@ public sealed class RequestsController : ControllerBase {
             return NotFound(ApiErrors.NotFound("Equipment was not found."));
         }
 
-        if (equipment.Status != EquipmentStatus.Available) {
+        if (equipment.Status is EquipmentStatus.UnderRepair or EquipmentStatus.Retired) {
             return Conflict(ApiErrors.Conflict("Equipment is not currently available."));
+        }
+
+        var hasOverlap = await _db.EquipmentRequests.AnyAsync(r =>
+            r.EquipmentId == request.EquipmentId
+            && r.Status != RequestStatus.Rejected
+            && r.Status != RequestStatus.Returned
+            && r.Status != RequestStatus.Cancelled
+            && r.RequestedFromUtc < request.RequestedToUtc
+            && r.RequestedToUtc >= request.RequestedFromUtc
+        );
+
+        if (hasOverlap) {
+            return Conflict(ApiErrors.Conflict("Equipment is already reserved for the requested dates."));
         }
 
         var initialStatus = equipment.RequiresAdminApproval ? RequestStatus.Pending : RequestStatus.Approved;
@@ -196,10 +209,6 @@ public sealed class RequestsController : ControllerBase {
             RequestedFromUtc = request.RequestedFromUtc,
             RequestedToUtc = request.RequestedToUtc,
         };
-
-        if (initialStatus == RequestStatus.Approved) {
-            equipment.Status = EquipmentStatus.Reserved;
-        }
 
         _db.EquipmentRequests.Add(entity);
         await _db.SaveChangesAsync();
@@ -250,7 +259,7 @@ public sealed class RequestsController : ControllerBase {
             && x.Id != request.Id
             && (x.Status == RequestStatus.Approved || x.Status == RequestStatus.CheckedOut)
             && x.RequestedFromUtc < request.RequestedToUtc
-            && x.RequestedToUtc > request.RequestedFromUtc);
+            && x.RequestedToUtc >= request.RequestedFromUtc);
 
         if (hasOverlap) {
             return Conflict(ApiErrors.Conflict(
@@ -265,7 +274,6 @@ public sealed class RequestsController : ControllerBase {
         request.ReviewedByAdminId = Guid.Parse(adminIdClaim);
         request.ReviewedAtUtc = DateTime.UtcNow;
         request.Status = RequestStatus.Approved;
-        request.Equipment.Status = EquipmentStatus.Reserved;
         request.AdminComment = payload?.Comment is not null ? InputValidator.Sanitize(payload.Comment) : null;
 
         await _db.SaveChangesAsync();
@@ -367,28 +375,6 @@ public sealed class RequestsController : ControllerBase {
         request.Status = RequestStatus.Returned;
         if (payload.WantsRepair) {
             request.Equipment.Status = EquipmentStatus.UnderRepair;
-        } else {
-            var hasOtherCheckedOut = await _db.EquipmentRequests
-                .AnyAsync(x => x.EquipmentId == request.EquipmentId
-                    && x.Id != request.Id
-                    && x.Status == RequestStatus.CheckedOut
-                    && x.ReturnedAtUtc == null);
-
-            if (hasOtherCheckedOut) {
-                request.Equipment.Status = EquipmentStatus.CheckedOut;
-            } else {
-                var now = DateTime.UtcNow;
-                var hasOtherApprovedReservation = await _db.EquipmentRequests
-                    .AnyAsync(x => x.EquipmentId == request.EquipmentId
-                        && x.Id != request.Id
-                        && x.Status == RequestStatus.Approved
-                        && x.ReturnedAtUtc == null
-                        && x.RequestedToUtc >= now);
-
-                request.Equipment.Status = hasOtherApprovedReservation
-                    ? EquipmentStatus.Reserved
-                    : EquipmentStatus.Available;
-            }
         }
 
         // I: if time, query a free ai to check if notes indicate damage and mark for repair xD
@@ -454,7 +440,6 @@ public sealed class RequestsController : ControllerBase {
         }
 
         request.Status = RequestStatus.CheckedOut;
-        request.Equipment.Status = EquipmentStatus.CheckedOut;
         request.CheckedOutAtUtc = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
