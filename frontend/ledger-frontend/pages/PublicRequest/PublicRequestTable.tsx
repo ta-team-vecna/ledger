@@ -122,6 +122,30 @@ const RequestsTable = () => {
     return s === 'checkedout' && !req.returnedAtUtc;
   };
 
+  // Can the user cancel this request?
+  const canCancel = (req: Request) => {
+    const s = req.status.replace(/\s/g, '').toLowerCase();
+    return s === 'pending' || s === 'approved';
+  };
+
+  const handleCancel = async (reqId: string) => {
+    if (!confirm('Cancel this request?')) return;
+    setActionLoading(true);
+    try {
+      const res = await apiFetch(`${API_BASE}/api/requests/${reqId}/cancel`, { method: 'PUT' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail || 'Cancel failed');
+      }
+      await fetchRequests();
+      if (selectedRequest?.id === reqId) setDetailsOpen(false);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Cancel failed');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleCheckout = async (reqId: string) => {
     setActionLoading(true);
     try {
@@ -261,6 +285,18 @@ const RequestsTable = () => {
                             Check Out
                           </Button>
                         )}
+                        {canCancel(req) && (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="error"
+                            disabled={actionLoading}
+                            onClick={() => handleCancel(req.id)}
+                            startIcon={<Icon>cancel</Icon>}
+                          >
+                            Cancel
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -339,6 +375,17 @@ const RequestsTable = () => {
                     startIcon={<Icon>assignment_return</Icon>}
                   >
                     {getStatusDisplay(selectedRequest).key === 'Overdue' ? 'Return' : 'Return Early'}
+                  </Button>
+                )}
+                {canCancel(selectedRequest) && (
+                  <Button
+                    onClick={() => handleCancel(selectedRequest.id)}
+                    color="error"
+                    variant="outlined"
+                    disabled={actionLoading}
+                    startIcon={<Icon>cancel</Icon>}
+                  >
+                    Cancel Request
                   </Button>
                 )}
               </DialogActions>

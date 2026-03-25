@@ -177,6 +177,29 @@ const AdminRequests = () => {
     return s === 'CheckedOut' && !req.returnedAtUtc;
   };
 
+  const canCancel = (req: EquipmentRequest) => {
+    const s = req.status.replace(/\s/g, '').toLowerCase();
+    return s === 'pending' || s === 'approved';
+  };
+
+  const handleCancel = async (reqId: string) => {
+    if (!confirm('Cancel this request?')) return;
+    setActionLoading(true);
+    try {
+      const res = await apiFetch(`${API_BASE}/api/requests/${reqId}/cancel`, { method: 'PUT' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.detail || 'Cancel failed');
+      }
+      await fetchRequests();
+      setDetailsOpen(false);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Cancel failed');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric', month: 'short', day: 'numeric',
@@ -325,7 +348,7 @@ const AdminRequests = () => {
                           </span>
                         </Tooltip>
                       </td>
-                      <td>
+                      <td style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                         <Button
                           size="small"
                           variant="outlined"
@@ -334,6 +357,18 @@ const AdminRequests = () => {
                         >
                           View
                         </Button>
+                        {canCancel(request) && (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="error"
+                            disabled={actionLoading}
+                            onClick={() => handleCancel(request.id)}
+                            startIcon={<Icon>cancel</Icon>}
+                          >
+                            Cancel
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -438,6 +473,17 @@ const AdminRequests = () => {
                       Approve
                     </Button>
                   </>
+                )}
+                {canCancel(selectedRequest) && (
+                  <Button
+                    onClick={() => handleCancel(selectedRequest.id)}
+                    color="error"
+                    variant="outlined"
+                    disabled={actionLoading}
+                    startIcon={<Icon>cancel</Icon>}
+                  >
+                    Cancel Request
+                  </Button>
                 )}
                 {canAdminReturn(selectedRequest) && (
                   <Button

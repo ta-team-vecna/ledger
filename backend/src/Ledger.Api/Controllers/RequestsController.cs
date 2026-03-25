@@ -462,6 +462,59 @@ public sealed class RequestsController : ControllerBase {
         return NoContent();
     }
 
+    /// <summary>
+    /// Cancels a pending or approved request, freeing the equipment reservation if applicable.
+    /// </summary>
+    /// <param name="id">The unique identifier of the request to cancel.</param>
+    /// <returns>An empty success response.</returns>
+    /// <response code="204">Successfully cancelled the request.</response>
+    /// <response code="400">If the request is not in a cancellable state.</response>
+    /// <response code="404">If the request could not be found.</response>
+    /// <response code="401">If the user is not authenticated.</response>
+    /// <response code="403">If the user is not the request owner or an admin.</response>
+    [HttpPut("{id:guid}/cancel")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult> Cancel(Guid id) {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userIdClaim is null) return Unauthorized(ApiErrors.Unauthorized);
+
+        var currentUserId = Guid.Parse(userIdClaim);
+        var request = await _db.EquipmentRequests
+            .Include(r => r.Equipment)
+            .FirstOrDefaultAsync(x => x.Id == id);
+
+        if (request is null) return NotFound(ApiErrors.NotFound("Request was not found."));
+
+        var isAdmin = await _db.Users.AnyAsync(x => x.Id == currentUserId && x.Role == UserRole.Admin);
+        if (request.UserId != currentUserId && !isAdmin) return Forbid();
+
+        if (request.Status != RequestStatus.Pending && request.Status != RequestStatus.Approved) {
+            return BadRequest(ApiErrors.BadRequest("Invalid state", "Only pending or approved requests can be cancelled."));
+        }
+
+        request.Status = RequestStatus.Cancelled;
+
+        // Free equipment if it was reserved by this request
+        if (request.Equipment.Status == EquipmentStatus.Reserved) {
+            var now = DateTime.UtcNow;
+            var hasOtherReservation = await _db.EquipmentRequests.AnyAsync(x =>
+                x.EquipmentId == request.EquipmentId
+                && x.Id != request.Id
+                && x.Status == RequestStatus.Approved
+                && x.RequestedToUtc >= now);
+
+            request.Equipment.Status = hasOtherReservation ? EquipmentStatus.Reserved : EquipmentStatus.Available;
+        }
+
+        await _db.SaveChangesAsync();
+        return NoContent();
+    }
+
     private static Expression<Func<EquipmentRequest, EquipmentRequestResponse>> ResponseFromEntity => x => new EquipmentRequestResponse(
         x.Id,
         x.UserId,
