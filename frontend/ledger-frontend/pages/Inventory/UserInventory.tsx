@@ -298,9 +298,9 @@ const UserInventory = () => {
             })}
           </div>
         )}
-      </div>
 
-      <Pagination page={page} totalPages={hasActiveFilter ? 1 : totalPages} totalCount={totalCount} pageSize={PAGE_SIZE} onPageChange={setPage} />
+        <Pagination page={page} totalPages={hasActiveFilter ? 1 : totalPages} totalCount={totalCount} pageSize={PAGE_SIZE} onPageChange={setPage} />
+      </div>
 
       {/* Modals */}
       <RequestModal
