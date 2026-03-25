@@ -91,6 +91,11 @@
   text-align: center;
 }
 
+.actionsCell {
+  width: 1%;
+  white-space: nowrap;
+}
+
 .categoryCell {
   display: flex;
   align-items: center;

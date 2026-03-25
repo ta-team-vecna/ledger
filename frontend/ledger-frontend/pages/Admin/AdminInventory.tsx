@@ -66,6 +66,7 @@ const AdminInventory = () => {
   
   // Modal State
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [editItem, setEditItem] = useState<Equipment | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   
@@ -501,7 +502,17 @@ const getDisplayStatus = (item: Equipment): string => {
                       />
                     </td>
                     <td>{item.location}</td>
-                    <td>
+                    <td className={styles.actionsCell}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        className={styles.actionButton}
+                        onClick={() => setEditItem(equipment.find(e => e.id === item.id) ?? null)}
+                        startIcon={<Icon>edit</Icon>}
+                        sx={{ mr: 0.5 }}
+                      >
+                        Edit
+                      </Button>
                       <Tooltip title={!allowed ? reason : ''} arrow>
                         <span>
                           <Button
@@ -556,6 +567,13 @@ const getDisplayStatus = (item: Equipment): string => {
         open={addModalOpen}
         onClose={() => setAddModalOpen(false)}
         onItemAdded={fetchData}
+      />
+
+      <AddItemModal
+        open={!!editItem}
+        onClose={() => setEditItem(null)}
+        onItemAdded={() => { fetchData(); setEditItem(null); }}
+        editItem={editItem}
       />
 
       <Dialog open={deleteConfirmOpen} onClose={() => !deleting && setDeleteConfirmOpen(false)}>
