@@ -16,6 +16,6 @@ public sealed record RegisterRequest(
     [RegularExpression(InputValidator.EmailPattern, ErrorMessage = InputValidator.EmailErrorMessage)]
     string Email,
 
-    [Required, MinLength(InputValidator.PasswordMinLength), MaxLength(InputValidator.PasswordMaxLength)]
+    [Required, MinLength(InputValidator.PasswordMinLength, ErrorMessage = "Password must be at least 8 characters."), MaxLength(InputValidator.PasswordMaxLength)]
     string Password
 );

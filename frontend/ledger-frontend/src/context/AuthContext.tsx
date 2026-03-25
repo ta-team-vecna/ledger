@@ -82,6 +82,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!res.ok) {
       const error = await res.json();
+      if (error.errors) {
+        const fieldLabels: Record<string, string> = {
+          FirstName: 'First Name',
+          LastName: 'Last Name',
+          Email: 'Email',
+          Password: 'Password',
+        };
+        const messages = Object.entries(error.errors as Record<string, string[]>)
+          .flatMap(([field, msgs]) => msgs.map(m => `${fieldLabels[field] ?? field}: ${m}`));
+        throw new Error(messages.join('\n'));
+      }
       throw new Error(error.detail || "Registration failed");
     }
 

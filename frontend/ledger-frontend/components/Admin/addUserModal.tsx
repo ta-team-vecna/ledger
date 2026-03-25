@@ -33,7 +33,7 @@ const AddUserModal = ({ open, onClose, onUserAdded }: AddUserModalProps) => {
     lastName: '',
     email: '',
     password: '',
-    role: 0  // 0 = User, 1 = Admin
+    role: 'User' as 'User' | 'Admin'
   });
   
   const [showPassword, setShowPassword] = useState(false);
@@ -60,8 +60,8 @@ const AddUserModal = ({ open, onClose, onUserAdded }: AddUserModalProps) => {
     
     if (!formData.password) {
       errors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters';
+    } else if (formData.password.length < 8) {
+      errors.password = 'Password must be at least 8 characters';
     }
     
     setFieldErrors(errors);
@@ -76,9 +76,9 @@ const AddUserModal = ({ open, onClose, onUserAdded }: AddUserModalProps) => {
     }
   };
 
-  const handleSelectChange = (e: SelectChangeEvent<number>) => {
+  const handleSelectChange = (e: SelectChangeEvent<string>) => {
     const name = e.target.name as string;
-    const value = e.target.value as number;
+    const value = e.target.value;
     setFormData(prev => ({ ...prev, [name]: value }));
     if (fieldErrors[name]) {
       setFieldErrors(prev => ({ ...prev, [name]: '' }));
@@ -122,7 +122,7 @@ const AddUserModal = ({ open, onClose, onUserAdded }: AddUserModalProps) => {
         lastName: '',
         email: '',
         password: '',
-        role: 0
+        role: 'User'
       });
       
       onUserAdded();
@@ -141,7 +141,7 @@ const AddUserModal = ({ open, onClose, onUserAdded }: AddUserModalProps) => {
         lastName: '',
         email: '',
         password: '',
-        role: 0
+        role: 'User'
       });
       setFieldErrors({});
       setError(null);
@@ -226,7 +226,7 @@ const AddUserModal = ({ open, onClose, onUserAdded }: AddUserModalProps) => {
           onChange={handleTextChange} 
           disabled={loading}
           error={!!fieldErrors.password}
-          helperText={fieldErrors.password || 'Minimum 6 characters'}
+          helperText={fieldErrors.password}
           className={styles.field}
           InputProps={{
             endAdornment: (
@@ -249,11 +249,11 @@ const AddUserModal = ({ open, onClose, onUserAdded }: AddUserModalProps) => {
             name="role"
             value={formData.role}
             label="Role"
-            onChange={handleSelectChange} 
+            onChange={handleSelectChange}
             disabled={loading}
           >
-            <MenuItem value={0}>User</MenuItem>
-            <MenuItem value={1}>Admin</MenuItem>
+            <MenuItem value="User">User</MenuItem>
+            <MenuItem value="Admin">Admin</MenuItem>
           </Select>
           <FormHelperText>Select user role</FormHelperText>
         </FormControl>

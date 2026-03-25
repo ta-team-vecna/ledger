@@ -27,6 +27,11 @@ const RegisterPage = () => {
       return;
     }
 
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -51,7 +56,7 @@ const RegisterPage = () => {
         <h1>CREATE ACCOUNT</h1>
         <p>Fill in the details to register</p>
         <form onSubmit={handleSubmit} style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
-          {error && <Alert severity="error" sx={{ width: "90%", mb: 2 }}>{error}</Alert>}
+          {error && <Alert severity="error" sx={{ width: "90%", mb: 2, whiteSpace: 'pre-line' }}>{error}</Alert>}
           <TextField
             className={styles.TextInput}
             label="First Name"
@@ -83,6 +88,7 @@ const RegisterPage = () => {
             value={password}
             onChange={(e) => setPassword(removeWhitespace(e.target.value))}
             required
+            slotProps={{ htmlInput: { minLength: 8 } }}
           />
           <TextField
             className={styles.TextInput}
