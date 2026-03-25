@@ -223,3 +223,14 @@
     font-size: 12px;
   }
 }
+
+.actionsCell {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.actionButtons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}

@@ -274,3 +274,8 @@
   min-width: 90px !important;
   font-weight: 600 !important;
 }
+
+.actionsCell {
+  width: 1%;
+  white-space: nowrap;
+}

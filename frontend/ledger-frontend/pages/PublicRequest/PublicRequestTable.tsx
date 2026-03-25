@@ -265,38 +265,40 @@ const RequestsTable = () => {
                         />
                       </td>
                       <td>{formatDate(req.requestedAtUtc)}</td>
-                      <td style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => { setSelectedRequest(req); setDetailsOpen(true); }}
-                        >
-                          View
-                        </Button>
-                        {canCheckOut(req) && (
-                          <Button
-                            size="small"
-                            variant="contained"
-                            color="success"
-                            disabled={actionLoading}
-                            onClick={() => handleCheckout(req.id)}
-                            startIcon={<Icon>login</Icon>}
-                          >
-                            Check Out
-                          </Button>
-                        )}
-                        {canCancel(req) && (
+                      <td className={styles.actionsCell}>
+                        <div className={styles.actionButtons}>
                           <Button
                             size="small"
                             variant="outlined"
-                            color="error"
-                            disabled={actionLoading}
-                            onClick={() => handleCancel(req.id)}
-                            startIcon={<Icon>cancel</Icon>}
+                            onClick={() => { setSelectedRequest(req); setDetailsOpen(true); }}
                           >
-                            Cancel
+                            View
                           </Button>
-                        )}
+                          {canCheckOut(req) && (
+                            <Button
+                              size="small"
+                              variant="contained"
+                              color="success"
+                              disabled={actionLoading}
+                              onClick={() => handleCheckout(req.id)}
+                              startIcon={<Icon>login</Icon>}
+                            >
+                              Check Out
+                            </Button>
+                          )}
+                          {canCancel(req) && (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="error"
+                              disabled={actionLoading}
+                              onClick={() => handleCancel(req.id)}
+                              startIcon={<Icon>cancel</Icon>}
+                            >
+                              Cancel
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

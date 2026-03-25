@@ -348,27 +348,29 @@ const AdminRequests = () => {
                           </span>
                         </Tooltip>
                       </td>
-                      <td style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          className={styles.viewButton}
-                          onClick={() => { setSelectedRequest(request); setDetailsOpen(true); }}
-                        >
-                          View
-                        </Button>
-                        {canCancel(request) && (
+                      <td className={styles.actionsCell}>
+                        <div className={styles.actionButtons}>
                           <Button
                             size="small"
                             variant="outlined"
-                            color="error"
-                            disabled={actionLoading}
-                            onClick={() => handleCancel(request.id)}
-                            startIcon={<Icon>cancel</Icon>}
+                            className={styles.viewButton}
+                            onClick={() => { setSelectedRequest(request); setDetailsOpen(true); }}
                           >
-                            Cancel
+                            View
                           </Button>
-                        )}
+                          {canCancel(request) && (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="error"
+                              disabled={actionLoading}
+                              onClick={() => handleCancel(request.id)}
+                              startIcon={<Icon>cancel</Icon>}
+                            >
+                              Cancel
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

@@ -293,6 +293,17 @@
   gap: 8px;
 }
 
+.actionsCell {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.actionButtons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
 @media (max-width: 768px) {
   .userSectionHeader {
     flex-direction: column;

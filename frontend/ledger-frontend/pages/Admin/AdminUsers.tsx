@@ -565,7 +565,7 @@ const exportToPDF = async () => {
                       checkedIcon={<Icon className={styles.checkboxIconChecked}>check_box</Icon>}
                     />
                   </td>
-                  <td>
+                  <td className={styles.actionsCell}>
                   <div className={styles.actionButtons}>
                     <Button
                       disabled={user.id === currentUserIdFromAuth}
