@@ -147,6 +147,12 @@ const RequestModal = ({ open, onClose, onRequestSubmitted, preselectedEquipmentI
         errors.requestedFromUtc = 'Start date cannot be in the past';
       }
 
+      const maxStartDate = new Date();
+      maxStartDate.setMonth(maxStartDate.getMonth() + 6);
+      if (startDate > maxStartDate) {
+        errors.requestedFromUtc = 'Start date cannot be more than 6 months from today';
+      }
+
       if (startDate.getFullYear() < 2000) {
         errors.requestedFromUtc = 'Invalid start date';
       }
@@ -414,6 +420,7 @@ const RequestModal = ({ open, onClose, onRequestSubmitted, preselectedEquipmentI
                   }
                 }}
                 minDate={new Date()}
+                maxDate={(() => { const d = new Date(); d.setMonth(d.getMonth() + 6); return d; })()}
               />
 
               <DatePicker
@@ -422,6 +429,7 @@ const RequestModal = ({ open, onClose, onRequestSubmitted, preselectedEquipmentI
                 onChange={(date) => handleDateChange('requestedToUtc', date)}
                 disabled={submitting}
                 minDate={formData.requestedFromUtc ? new Date(formData.requestedFromUtc) : new Date()}
+                maxDate={(() => { const d = new Date(); d.setMonth(d.getMonth() + 6); return d; })()}
                 slotProps={{
                   textField: {
                     fullWidth: true,
@@ -443,7 +451,7 @@ const RequestModal = ({ open, onClose, onRequestSubmitted, preselectedEquipmentI
               <div className={styles.validationNote}>
                 <Icon className={styles.noteIcon}>info</Icon>
                 <small>
-                  Maximum rental period: 30 days.
+                  Maximum rental period: 30 days. Reservations up to 6 months ahead.
                   {equipment.length > 0 && ` ${filteredEquipment.length} items shown (${equipment.length} total)`}
                 </small>
               </div>
