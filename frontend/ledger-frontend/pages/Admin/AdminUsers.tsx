@@ -587,7 +587,6 @@ const exportToPDF = async () => {
 
         {/* Footer with counts */}
         <div className={styles.tableFooter}>
-          <span>Showing {filteredUsers.length} of {hasActiveFilter ? filteredUsers.length : totalCount}{hasActiveFilter ? ' (filtered)' : ''}</span>
           {selectedUsers.length > 0 && (
             <span className={styles.selectedCount}>
               {selectedUsers.length} selected

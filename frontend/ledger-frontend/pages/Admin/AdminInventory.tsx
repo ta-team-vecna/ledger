@@ -505,7 +505,6 @@ const STATUS_STRING: Record<string, string> = {
 
         {/* Footer */}
         <div className={styles.tableFooter}>
-          <span>Showing {filteredItems.length} of {hasActiveFilter ? filteredItems.length : totalCount}{hasActiveFilter ? ' (filtered)' : ''}</span>
           {selectedItems.length > 0 && (
             <span className={styles.selectedCount}>
               {selectedItems.length} selected

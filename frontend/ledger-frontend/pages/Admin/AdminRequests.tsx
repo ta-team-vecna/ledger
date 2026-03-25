@@ -381,7 +381,6 @@ const AdminRequests = () => {
         </div>
 
         <div className={styles.footer}>
-          <span>Showing {filteredRequests.length} of {hasActiveFilter ? filteredRequests.length : totalCount}{hasActiveFilter ? ' (filtered)' : ''}</span>
           {statusFilter !== 'all' && (
             <Chip
               size="small"

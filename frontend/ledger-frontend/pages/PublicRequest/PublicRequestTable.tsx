@@ -308,9 +308,6 @@ const RequestsTable = () => {
           </div>
         )}
 
-        <div className={styles.footer}>
-          Showing {filteredRequests.length} of {statusFilter === 'all' ? totalCount : filteredRequests.length} {statusFilter !== 'all' ? '(filtered)' : ''}
-        </div>
         <Pagination page={page} totalPages={statusFilter !== 'all' ? 1 : totalPages} totalCount={totalCount} pageSize={PAGE_SIZE} onPageChange={setPage} />
       </div>
 
