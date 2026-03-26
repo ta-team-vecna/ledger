@@ -53,7 +53,7 @@ const AddItemModal = ({ open, onClose, onItemAdded, editItem }: AddItemModalProp
         location: editItem.location,
         photoUrl: editItem.photoUrl ?? '',
         requiresAdminApproval: editItem.requiresAdminApproval,
-        status: editItem.status,
+        status: editItem.status === 'Overdue' ? 'CheckedOut' : editItem.status,
       });
     } else {
       setFormData({ name: '', type: '', serialNumber: '', condition: '', location: '', photoUrl: '', requiresAdminApproval: false, status: 'Available' });
