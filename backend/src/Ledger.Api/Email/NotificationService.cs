@@ -124,11 +124,12 @@ public sealed class NotificationService : INotificationService {
         var now = DateTime.UtcNow;
 
         // Approved requests with pickup within 24h that haven't been checked out yet
+        var todayStart = now.Date;
         var upcoming = await _db.EquipmentRequests
             .Include(r => r.User)
             .Include(r => r.Equipment)
             .Where(r => r.Status == RequestStatus.Approved
-                && r.RequestedFromUtc > now
+                && r.RequestedFromUtc >= todayStart
                 && r.RequestedFromUtc <= now.AddHours(24))
             .ToListAsync(ct);
 
@@ -137,7 +138,7 @@ public sealed class NotificationService : INotificationService {
                 n => n.EquipmentRequestId == request.Id && n.NotificationType == "PickupReminder", ct);
             if (sentCount >= 2) continue;
 
-            var isDueToday = request.RequestedFromUtc.Date == now.Date;
+            var isDueToday = request.RequestedFromUtc.Date <= now.Date;
             var subject = $"[Ledger] {request.Equipment.Name} — {(isDueToday ? "Pickup due today" : "Pickup reminder")}";
             var threadId = $"request-{request.Id}";
             var html = EmailTemplates.PickupReminder(request.Equipment.Name, request.RequestedFromUtc, isDueToday);
@@ -197,29 +198,38 @@ public sealed class NotificationService : INotificationService {
                 await RecordAsync(request.User.Email, request.Id, "OverdueBorrower", subject, threadId, ct);
             }
 
-            // Escalate to admins after 1 day overdue
+        }
+
+        // Batch escalation — one digest email covering all items >= 1 day overdue
+        var escalationItems = new List<(string BorrowerName, string BorrowerEmail, string EquipmentName, DateTime DueDate, int DaysOverdue, Guid RequestId)>();
+
+        foreach (var request in overdue) {
             var daysOverdue = (int)(now - request.RequestedToUtc).TotalDays;
-            if (daysOverdue >= 1) {
-                var adminSent = await _db.EmailNotifications.AnyAsync(
-                    n => n.EquipmentRequestId == request.Id && n.NotificationType == "OverdueAdmin", ct);
+            if (daysOverdue < 1) continue;
 
-                if (!adminSent) {
-                    var admins = await _db.Users
-                        .Where(u => u.Role == UserRole.Admin)
-                        .Select(u => new { u.Email, u.FullName })
-                        .ToListAsync(ct);
+            var adminSent = await _db.EmailNotifications.AnyAsync(
+                n => n.EquipmentRequestId == request.Id && n.NotificationType == "OverdueAdmin", ct);
+            if (adminSent) continue;
 
-                    var subject = $"[Ledger] {request.Equipment.Name} — Overdue escalation";
-                    var threadId = $"request-{request.Id}";
-                    var html = EmailTemplates.OverdueAdmin(request.User.FullName, request.User.Email,
-                        request.Equipment.Name, request.RequestedToUtc, daysOverdue);
+            escalationItems.Add((request.User.FullName, request.User.Email,
+                request.Equipment.Name, request.RequestedToUtc, daysOverdue, request.Id));
+        }
 
-                    foreach (var admin in admins) {
-                        await _email.SendAsync(admin.Email, admin.FullName, subject, html, threadId, ct);
-                        await RecordAsync(admin.Email, request.Id, "OverdueAdmin", subject, threadId, ct);
-                    }
-                }
-            }
+        if (escalationItems.Count > 0) {
+            var admins = await _db.Users
+                .Where(u => u.Role == UserRole.Admin)
+                .Select(u => new { u.Email, u.FullName })
+                .ToListAsync(ct);
+
+            var subject = $"[Ledger] Overdue escalation — {escalationItems.Count} item(s)";
+            var threadId = $"overdue-escalation-{now:yyyyMMdd}";
+            var html = EmailTemplates.OverdueAdminDigest(
+                escalationItems.Select(i => (i.BorrowerName, i.BorrowerEmail, i.EquipmentName, i.DueDate, i.DaysOverdue)).ToList());
+
+            await _email.SendToManyAsync(admins.Select(a => (a.Email, a.FullName)), subject, html, threadId, ct);
+
+            foreach (var item in escalationItems)
+                await RecordAsync("digest-admins", item.RequestId, "OverdueAdmin", subject, threadId, ct);
         }
     }
 

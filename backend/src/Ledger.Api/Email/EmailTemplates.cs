@@ -99,6 +99,21 @@ public static class EmailTemplates {
             </table>
             """);
 
+    public static string OverdueAdminDigest(
+        List<(string BorrowerName, string BorrowerEmail, string EquipmentName, DateTime DueDate, int DaysOverdue)> items) {
+        var rows = string.Join("\n", items.Select(i =>
+            $"""<tr><td style="padding:6px 12px;border-bottom:1px solid #e5e7eb">{i.BorrowerName} ({i.BorrowerEmail})</td><td style="padding:6px 12px;border-bottom:1px solid #e5e7eb">{i.EquipmentName}</td><td style="padding:6px 12px;border-bottom:1px solid #e5e7eb">{i.DueDate:MMM dd, yyyy}</td><td style="padding:6px 12px;border-bottom:1px solid #e5e7eb;color:#dc2626;font-weight:600">{i.DaysOverdue}d</td></tr>"""));
+
+        return Wrap($"Overdue Escalation — {items.Count} Item(s)", $"""
+            <p style="color:#dc2626">The following items are overdue and require your attention.</p>
+            <table style="border-collapse:collapse;width:100%;margin:12px 0">
+              <tr style="background:#f1f5f9"><th style="padding:6px 12px;text-align:left">Borrower</th><th style="padding:6px 12px;text-align:left">Equipment</th><th style="padding:6px 12px;text-align:left">Due date</th><th style="padding:6px 12px;text-align:left">Overdue</th></tr>
+              {rows}
+            </table>
+            <p>Please follow up with the borrowers listed above.</p>
+            """);
+    }
+
     public static string PasswordReset(string resetToken) =>
         Wrap("Password Reset Requested", $"""
             <p>A password reset was requested for your account.</p>
