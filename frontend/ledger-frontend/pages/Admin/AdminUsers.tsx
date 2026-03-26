@@ -226,11 +226,25 @@ const AdminUsers = () => {
     setDeleting(true);
     try {
       const results = await Promise.all(
-        selectedUsers.map(id => apiFetch(`${API_BASE}/api/users/${id}`, { method: 'DELETE' }))
+        selectedUsers.map(async id => {
+          const res = await apiFetch(`${API_BASE}/api/users/${id}`, { method: 'DELETE' });
+          return { id, res };
+        })
       );
-      const failed = results.filter(r => !r.ok);
+      const failed = results.filter(r => !r.res.ok);
       if (failed.length > 0) {
-        alert(`${failed.length} users could not be deleted.`);
+        const messages = await Promise.all(
+          failed.map(async ({ res }) => {
+            try {
+              const body = await res.json();
+              return body.detail || `Error ${res.status}`;
+            } catch {
+              return `Error ${res.status}`;
+            }
+          })
+        );
+        const unique = [...new Set(messages)];
+        alert(`${failed.length} user(s) could not be deleted:\n\n${unique.join('\n')}`);
       }
       await fetchUsers();
       setSelectedUsers([]);
