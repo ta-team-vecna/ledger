@@ -211,6 +211,7 @@ const AdminRequests = () => {
   // Filter by derived status key + search
   const filteredRequests = requests.filter(req => {
     const matchesSearch = searchTerm === '' ||
+      req.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       req.userFullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       req.equipmentName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       req.equipmentSerialNumber?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -249,7 +250,7 @@ const AdminRequests = () => {
 
           <TextField
             size="small"
-            placeholder="Search user, equipment, serial..."
+            placeholder="Search by ID, user, equipment, serial..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             InputProps={{
