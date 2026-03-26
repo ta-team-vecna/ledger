@@ -1,3 +1,4 @@
+using System.Data;
 using System.Linq.Expressions;
 using System.Security.Claims;
 using Ledger.Api.Data;
@@ -199,44 +200,52 @@ public sealed class RequestsController : ControllerBase {
             return Conflict(ApiErrors.Conflict("Equipment is not currently available."));
         }
 
-        var hasOverlap = await _db.EquipmentRequests.AnyAsync(r =>
-            r.EquipmentId == request.EquipmentId
-            && r.Status != RequestStatus.Rejected
-            && r.Status != RequestStatus.Returned
-            && r.Status != RequestStatus.Cancelled
-            && r.RequestedFromUtc < request.RequestedToUtc
-            && r.RequestedToUtc >= request.RequestedFromUtc
-        );
+        await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+        try {
+            var hasOverlap = await _db.EquipmentRequests.AnyAsync(r =>
+                r.EquipmentId == request.EquipmentId
+                && r.Status != RequestStatus.Rejected
+                && r.Status != RequestStatus.Returned
+                && r.Status != RequestStatus.Cancelled
+                && r.RequestedFromUtc < request.RequestedToUtc
+                && r.RequestedToUtc >= request.RequestedFromUtc
+            );
 
-        if (hasOverlap) {
+            if (hasOverlap) {
+                await tx.RollbackAsync();
+                return Conflict(ApiErrors.Conflict("Equipment is already reserved for the requested dates."));
+            }
+
+            var initialStatus = equipment.RequiresAdminApproval ? RequestStatus.Pending : RequestStatus.Approved;
+            var entity = new EquipmentRequest {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                EquipmentId = equipment.Id,
+                Status = initialStatus,
+                RequestedAtUtc = DateTime.UtcNow,
+                RequestedFromUtc = request.RequestedFromUtc,
+                RequestedToUtc = request.RequestedToUtc,
+            };
+
+            _db.EquipmentRequests.Add(entity);
+            await _db.SaveChangesAsync();
+            await tx.CommitAsync();
+
+            if (initialStatus == RequestStatus.Pending) {
+                FireNotification(n => n.NotifyApprovalNeededAsync(entity.Id));
+            }
+
+            var response = await _db.EquipmentRequests
+                .AsNoTracking()
+                .Where(x => x.Id == entity.Id)
+                .Select(ResponseFromEntity)
+                .FirstAsync();
+
+            return CreatedAtAction(nameof(GetById), new { id = entity.Id }, response);
+        } catch (Exception) {
+            await tx.RollbackAsync();
             return Conflict(ApiErrors.Conflict("Equipment is already reserved for the requested dates."));
         }
-
-        var initialStatus = equipment.RequiresAdminApproval ? RequestStatus.Pending : RequestStatus.Approved;
-        var entity = new EquipmentRequest {
-            Id = Guid.NewGuid(),
-            UserId = userId,
-            EquipmentId = equipment.Id,
-            Status = initialStatus,
-            RequestedAtUtc = DateTime.UtcNow,
-            RequestedFromUtc = request.RequestedFromUtc,
-            RequestedToUtc = request.RequestedToUtc,
-        };
-
-        _db.EquipmentRequests.Add(entity);
-        await _db.SaveChangesAsync();
-
-        if (initialStatus == RequestStatus.Pending) {
-            FireNotification(n => n.NotifyApprovalNeededAsync(entity.Id));
-        }
-
-        var response = await _db.EquipmentRequests
-            .AsNoTracking()
-            .Where(x => x.Id == entity.Id)
-            .Select(ResponseFromEntity)
-            .FirstAsync();
-
-        return CreatedAtAction(nameof(GetById), new { id = entity.Id }, response);
     }
 
     /// <summary>
