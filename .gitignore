@@ -7,3 +7,6 @@ obj/
 node_modules/
 
 .vscode/
+
+# Local dev config with secrets — never commit
+backend/src/Ledger.Api/appsettings.Development.json
