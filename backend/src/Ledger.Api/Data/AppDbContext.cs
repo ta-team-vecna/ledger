@@ -7,6 +7,7 @@ public sealed class AppDbContext : DbContext {
     public DbSet<ApplicationUser> Users => Set<ApplicationUser>();
     public DbSet<Equipment> Equipment => Set<Equipment>();
     public DbSet<EquipmentRequest> EquipmentRequests => Set<EquipmentRequest>();
+    public DbSet<EmailNotification> EmailNotifications => Set<EmailNotification>();
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -97,6 +98,40 @@ public sealed class AppDbContext : DbContext {
                 .WithMany(x => x.ReviewedRequests)
                 .HasForeignKey(x => x.ReviewedByAdminId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<EmailNotification>(entity => {
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.RecipientEmail)
+                .IsRequired()
+                .HasMaxLength(256);
+
+            entity.Property(x => x.NotificationType)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            entity.Property(x => x.Subject)
+                .IsRequired()
+                .HasMaxLength(500);
+
+            entity.Property(x => x.ThreadId)
+                .HasMaxLength(200);
+
+            entity.Property(x => x.Status)
+                .IsRequired()
+                .HasMaxLength(20);
+
+            entity.Property(x => x.ErrorMessage)
+                .HasMaxLength(1000);
+
+            entity.HasOne(x => x.EquipmentRequest)
+                .WithMany()
+                .HasForeignKey(x => x.EquipmentRequestId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(x => new { x.EquipmentRequestId, x.NotificationType });
+            entity.HasIndex(x => new { x.NotificationType, x.SentAtUtc });
         });
     }
 }

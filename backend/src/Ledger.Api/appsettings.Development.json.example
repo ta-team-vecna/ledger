@@ -1,0 +1,27 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Debug",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*",
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5432;Database=ledger;Username=postgres;Password=yourpassword"
+  },
+  "Jwt": {
+    "Issuer": "Ledger.Api",
+    "Audience": "Ledger.Frontend",
+    "Key": "replace-with-a-random-32-char-string"
+  },
+  "Smtp": {
+    "Host": "smtp.gmail.com",
+    "Port": 587,
+    "Username": "you@gmail.com",
+    "Password": "your-gmail-app-password",
+    "FromAddress": "you@gmail.com",
+    "FromName": "Ledger System",
+    "EnableSsl": true,
+    "Enabled": false
+  }
+}

@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using Ledger.Api.Auth;
 using Ledger.Api.Data;
 using Ledger.Api.Domain;
+using Ledger.Api.Email;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -69,6 +70,12 @@ builder.Services.AddAuthorization(options => {
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IPasswordHasher<ApplicationUser>, PasswordHasher<ApplicationUser>>();
 builder.Services.AddScoped<IAuthorizationHandler, StrictAdminHandler>();
+
+// Email notifications
+builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection(SmtpOptions.SectionName));
+builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddHostedService<NotificationBackgroundService>();
 
 var app = builder.Build();
 if (app.Environment.IsDevelopment()) {
