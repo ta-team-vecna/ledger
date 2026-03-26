@@ -43,7 +43,7 @@ const ResetPasswordPage = () => {
     <div className={styles.loginCard}>
       <img src={ledgerDarkLogo} alt="Ledger" className={styles.authLogo} />
       <h1>RESET PASSWORD</h1>
-      <p>Enter your reset token and a new password</p>
+      <p>Enter the token from your email and a new password</p>
 
       {success ? (
         <Alert severity="success" sx={{ width: '90%', mt: 2 }}>
@@ -58,7 +58,7 @@ const ResetPasswordPage = () => {
             value={token}
             onChange={e => setToken(e.target.value)}
             required
-            helperText="Paste the token from the forgot password page"
+            helperText="Paste the token from the reset email you received"
           />
           <TextField
             className={styles.TextInput}

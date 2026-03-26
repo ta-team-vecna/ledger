@@ -8,7 +8,7 @@ import ledgerDarkLogo from '../../src/assets/ledger-dark.svg';
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [resetToken, setResetToken] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -24,7 +24,7 @@ const ForgotPasswordPage = () => {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Request failed');
-      setResetToken(data.resetToken ?? null);
+      setSent(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
@@ -38,16 +38,13 @@ const ForgotPasswordPage = () => {
       <h1>FORGOT PASSWORD</h1>
       <p>Enter your email to receive a reset link</p>
 
-      {resetToken ? (
+      {sent ? (
         <div style={{ width: '90%', textAlign: 'center' }}>
           <Alert severity="success" sx={{ mb: 2 }}>
-            Reset token generated. Use it on the reset password page.
+            Check your email for a password reset link.
           </Alert>
-          <div style={{ background: '#f1f5f9', borderRadius: 8, padding: '12px', fontFamily: 'monospace', wordBreak: 'break-all', fontSize: 13, marginBottom: 16 }}>
-            {resetToken}
-          </div>
-          <Link component={RouterLink} to={`/reset-password?token=${resetToken}`} className={styles.customLink}>
-            Go to Reset Password →
+          <Link component={RouterLink} to="/reset-password" className={styles.customLink}>
+            Already have a token? Reset password →
           </Link>
         </div>
       ) : (
