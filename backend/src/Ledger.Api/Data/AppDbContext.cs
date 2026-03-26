@@ -98,6 +98,12 @@ public sealed class AppDbContext : DbContext {
                 .WithMany(x => x.ReviewedRequests)
                 .HasForeignKey(x => x.ReviewedByAdminId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(x => x.UserId);
+            entity.HasIndex(x => x.EquipmentId);
+            entity.HasIndex(x => x.Status);
+            entity.HasIndex(x => x.RequestedToUtc);
+            entity.HasIndex(x => new { x.Status, x.RequestedToUtc });
         });
 
         modelBuilder.Entity<EmailNotification>(entity => {
