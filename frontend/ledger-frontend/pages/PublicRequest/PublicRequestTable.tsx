@@ -331,6 +331,9 @@ const RequestsTable = () => {
                     }}
                   />
                 </div>
+                <div style={{ fontSize: '0.7rem', color: '#999', fontFamily: 'monospace', fontWeight: 'normal', marginTop: '2px' }}>
+                  {selectedRequest.id}
+                </div>
               </DialogTitle>
               <DialogContent>
                 <div className={styles.dialogGrid}>

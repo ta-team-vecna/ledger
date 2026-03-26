@@ -225,7 +225,7 @@ const AdminPanel = () => {
           </button>
           <div
             className={styles.userDropdown}
-            onClick={(e) => setAnchorEl(e.currentTarget)}
+            onClick={e => setAnchorEl(e.currentTarget)}
           >
             <Avatar className={styles.headerAvatar}>{userName.charAt(0)}</Avatar>
             <span className={styles.headerUserName}>{userName}</span>
@@ -235,6 +235,9 @@ const AdminPanel = () => {
             anchorEl={anchorEl}
             open={Boolean(anchorEl)}
             onClose={() => setAnchorEl(null)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            disableScrollLock
           >
             <MenuItem onClick={handleLogout}>Logout</MenuItem>
           </Menu>

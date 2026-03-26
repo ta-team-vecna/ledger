@@ -94,6 +94,7 @@ const PageLayout = ({ type, children }: PageLayoutProps) => {
             onClose={() => setAnchorEl(null)}
             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            disableScrollLock
           >
             <MenuItem onClick={handleLogout}>Logout</MenuItem>
           </Menu>

@@ -401,8 +401,13 @@ const AdminRequests = () => {
             <>
               <DialogTitle className={styles.dialogTitle}>
                 <div>
-                  <Icon className={styles.dialogIcon}>assignment</Icon>
-                  Request Details
+                  <div>
+                    <Icon className={styles.dialogIcon}>assignment</Icon>
+                    Request Details
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: '#999', fontFamily: 'monospace', fontWeight: 'normal', marginTop: '2px' }}>
+                    {selectedRequest.id}
+                  </div>
                 </div>
                 <Chip
                   label={display.text}
