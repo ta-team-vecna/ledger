@@ -4,6 +4,7 @@ using Ledger.Api.Data;
 using Ledger.Api.Domain;
 using Ledger.Api.Dto;
 using Ledger.Api.Dto.Equipment;
+using Ledger.Api.Email;
 using Ledger.Api.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,9 +17,21 @@ namespace Ledger.Api.Controllers;
 [Authorize]
 public sealed class RequestsController : ControllerBase {
     private readonly AppDbContext _db;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public RequestsController(AppDbContext db) {
+    public RequestsController(AppDbContext db, IServiceScopeFactory scopeFactory) {
         _db = db;
+        _scopeFactory = scopeFactory;
+    }
+
+    private void FireNotification(Func<INotificationService, Task> action) {
+        _ = Task.Run(async () => {
+            try {
+                await using var scope = _scopeFactory.CreateAsyncScope();
+                var notifications = scope.ServiceProvider.GetRequiredService<INotificationService>();
+                await action(notifications);
+            } catch { /* logged inside service */ }
+        });
     }
 
     /// <summary>
@@ -213,6 +226,10 @@ public sealed class RequestsController : ControllerBase {
         _db.EquipmentRequests.Add(entity);
         await _db.SaveChangesAsync();
 
+        if (initialStatus == RequestStatus.Pending) {
+            FireNotification(n => n.NotifyApprovalNeededAsync(entity.Id));
+        }
+
         var response = await _db.EquipmentRequests
             .AsNoTracking()
             .Where(x => x.Id == entity.Id)
@@ -278,6 +295,8 @@ public sealed class RequestsController : ControllerBase {
 
         await _db.SaveChangesAsync();
 
+        FireNotification(n => n.NotifyRequestDecisionAsync(request.Id, "Approved"));
+
         return NoContent();
     }
 
@@ -322,6 +341,8 @@ public sealed class RequestsController : ControllerBase {
         request.AdminComment = payload?.Comment is not null ? InputValidator.Sanitize(payload.Comment) : null;
 
         await _db.SaveChangesAsync();
+
+        FireNotification(n => n.NotifyRequestDecisionAsync(request.Id, "Rejected"));
 
         return NoContent();
     }
@@ -497,6 +518,9 @@ public sealed class RequestsController : ControllerBase {
         }
 
         await _db.SaveChangesAsync();
+
+        FireNotification(n => n.NotifyRequestCancelledAsync(request.Id));
+
         return NoContent();
     }
 

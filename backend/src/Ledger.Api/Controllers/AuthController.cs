@@ -4,6 +4,7 @@ using Ledger.Api.Auth;
 using Ledger.Api.Data;
 using Ledger.Api.Domain;
 using Ledger.Api.Dto;
+using Ledger.Api.Email;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -17,15 +18,28 @@ public sealed class AuthController : ControllerBase {
     private readonly AppDbContext _db;
     private readonly IPasswordHasher<ApplicationUser> _passwordHasher;
     private readonly IJwtTokenService _jwtTokenService;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     public AuthController(
         AppDbContext db,
         IPasswordHasher<ApplicationUser> passwordHasher,
-        IJwtTokenService jwtTokenService
+        IJwtTokenService jwtTokenService,
+        IServiceScopeFactory scopeFactory
     ) {
         _db = db;
         _passwordHasher = passwordHasher;
         _jwtTokenService = jwtTokenService;
+        _scopeFactory = scopeFactory;
+    }
+
+    private void FireNotification(Func<INotificationService, Task> action) {
+        _ = Task.Run(async () => {
+            try {
+                await using var scope = _scopeFactory.CreateAsyncScope();
+                var notifications = scope.ServiceProvider.GetRequiredService<INotificationService>();
+                await action(notifications);
+            } catch { }
+        });
     }
 
     private void SetTokenCookies(string accessToken, string refreshToken) {
@@ -245,16 +259,15 @@ public sealed class AuthController : ControllerBase {
         // Always return 200 to avoid email enumeration
         if (user is null) return Ok(new { message = "If that email is registered, a reset link has been sent." });
 
-        user.PasswordResetToken = Guid.NewGuid().ToString("N");
-        user.PasswordResetTokenExpiry = DateTime.UtcNow.AddHours(1);
+        user.PasswordResetToken = Random.Shared.Next(100000, 1000000).ToString();
+        user.PasswordResetTokenExpiry = DateTime.UtcNow.AddMinutes(15);
         await _db.SaveChangesAsync();
 
-        // In production, send user.PasswordResetToken via email.
-        // For development, the token is returned in the response.
-        return Ok(new {
-            message = "If that email is registered, a reset link has been sent.",
-            resetToken = user.PasswordResetToken   // remove this line in production
-        });
+        var resetToken = user.PasswordResetToken!;
+        var userId = user.Id;
+        FireNotification(n => n.NotifyPasswordResetAsync(userId, resetToken));
+
+        return Ok(new { message = "If that email is registered, a reset link has been sent." });
     }
 
     /// <summary>
@@ -280,6 +293,8 @@ public sealed class AuthController : ControllerBase {
         user.PasswordResetToken = null;
         user.PasswordResetTokenExpiry = null;
         await _db.SaveChangesAsync();
+
+        FireNotification(n => n.NotifyPasswordChangedAsync(user.Id));
 
         return Ok(new { message = "Password reset successfully." });
     }

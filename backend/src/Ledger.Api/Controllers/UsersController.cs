@@ -1,6 +1,7 @@
 ﻿using Ledger.Api.Data;
 using Ledger.Api.Domain;
 using Ledger.Api.Dto;
+using Ledger.Api.Email;
 using Ledger.Api.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -15,10 +16,22 @@ namespace Ledger.Api.Controllers;
 public class UsersController : ControllerBase {
     private readonly AppDbContext _db;
     private readonly IPasswordHasher<ApplicationUser> _passwordHasher;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public UsersController(AppDbContext db, IPasswordHasher<ApplicationUser> hasher) {
+    public UsersController(AppDbContext db, IPasswordHasher<ApplicationUser> hasher, IServiceScopeFactory scopeFactory) {
         _db = db;
         _passwordHasher = hasher;
+        _scopeFactory = scopeFactory;
+    }
+
+    private void FireNotification(Func<INotificationService, Task> action) {
+        _ = Task.Run(async () => {
+            try {
+                await using var scope = _scopeFactory.CreateAsyncScope();
+                var notifications = scope.ServiceProvider.GetRequiredService<INotificationService>();
+                await action(notifications);
+            } catch { }
+        });
     }
 
     /// <summary>
@@ -150,6 +163,14 @@ public class UsersController : ControllerBase {
             });
         }
 
+        var hasRequests = await _db.EquipmentRequests.AnyAsync(x => x.UserId == id);
+        if (hasRequests) {
+            return Conflict(new ProblemDetails {
+                Detail = "Cannot delete a user who has equipment requests. Remove their requests first.",
+                Status = StatusCodes.Status409Conflict,
+            });
+        }
+
         _db.Remove(user);
         await _db.SaveChangesAsync();
 
@@ -203,11 +224,19 @@ public class UsersController : ControllerBase {
             user.Email = normalizedEmail;
         }
 
-        if (request.Role is not null) {
+        string? oldRole = null;
+        if (request.Role is not null && request.Role.Value != user.Role) {
+            oldRole = user.Role.ToString();
             user.Role = request.Role.Value;
         }
 
         await _db.SaveChangesAsync();
+
+        if (oldRole is not null) {
+            var uid = user.Id;
+            var newRole = user.Role.ToString();
+            FireNotification(n => n.NotifyRoleChangedAsync(uid, oldRole, newRole));
+        }
 
         return NoContent();
     }
