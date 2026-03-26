@@ -163,6 +163,68 @@ public sealed class RequestsController : ControllerBase {
         return Ok(new PaginatedResponse<EquipmentRequestResponse>(requests, totalCount, pagination.ValidPage, pagination.ValidPageSize));
     }
 
+    [HttpGet("latest-actions")]
+    [Authorize(Policy = "StrictAdmin")]
+    public async Task<ActionResult<PaginatedResponse<LatestActionItem>>> GetLatestActions(
+        [FromQuery] string? type = null,
+        [FromQuery] PaginationParams? pagination = null) {
+        pagination ??= new PaginationParams();
+        var now = DateTime.UtcNow;
+
+        var requests = await _db.EquipmentRequests
+            .AsNoTracking()
+            .Include(r => r.User)
+            .Include(r => r.Equipment)
+            .ToListAsync();
+
+        var actions = new List<LatestActionItem>();
+
+        foreach (var r in requests) {
+            var name = r.User.FullName;
+            var equip = r.Equipment.Name;
+
+            if (r.ReturnedAtUtc.HasValue)
+                actions.Add(new LatestActionItem("returned", "check_circle", "#16a34a",
+                    $"{equip} returned by {name}", r.ReturnedAtUtc.Value));
+
+            if (r.Status == RequestStatus.CheckedOut && r.RequestedToUtc < now)
+                actions.Add(new LatestActionItem("overdue", "error", "#dc2626",
+                    $"OVERDUE: {equip} — {name}", r.RequestedToUtc));
+
+            if (r.CheckedOutAtUtc.HasValue && r.Status == RequestStatus.CheckedOut)
+                actions.Add(new LatestActionItem("checkedout", "shopping_cart", "#2563eb",
+                    $"{equip} checked out by {name}", r.CheckedOutAtUtc.Value));
+
+            if (r.ReviewedAtUtc.HasValue) {
+                if (r.Status == RequestStatus.Approved)
+                    actions.Add(new LatestActionItem("approved", "thumb_up", "#059669",
+                        $"{equip} approved for {name}", r.ReviewedAtUtc.Value));
+                else if (r.Status == RequestStatus.Rejected)
+                    actions.Add(new LatestActionItem("rejected", "thumb_down", "#dc2626",
+                        $"{equip} rejected for {name}", r.ReviewedAtUtc.Value));
+            }
+
+            if (r.Status == RequestStatus.Cancelled)
+                actions.Add(new LatestActionItem("cancelled", "cancel", "#f59e0b",
+                    $"{equip} request cancelled by {name}", r.RequestedAtUtc));
+            else
+                actions.Add(new LatestActionItem("submitted", "add_circle", "#6366f1",
+                    $"{equip} requested by {name}", r.RequestedAtUtc));
+        }
+
+        var ordered = actions
+            .Where(a => type == null || a.Type == type)
+            .OrderByDescending(a => a.Timestamp)
+            .ToList();
+
+        var paged = ordered
+            .Skip(pagination.Skip)
+            .Take(pagination.ValidPageSize)
+            .ToList();
+
+        return Ok(new PaginatedResponse<LatestActionItem>(paged, ordered.Count, pagination.ValidPage, pagination.ValidPageSize));
+    }
+
     /// <summary>
     /// Creates a new request to borrow equipment. If the equipment doesn't require admin approval,
     /// the request is marked as approved automatically.

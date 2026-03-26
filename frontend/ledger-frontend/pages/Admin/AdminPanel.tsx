@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '@mui/material/Icon';
 import Avatar from '@mui/material/Avatar';
@@ -47,9 +47,17 @@ interface ActionItem {
   icon: string;
   iconColor: string;
   text: string;
-  timeAgo: string;
-  timestamp: number;
+  timestamp: string;
 }
+
+const formatTimeAgo = (dateStr: string) => {
+  const minutes = Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60));
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days !== 1 ? 's' : ''} ago`;
+};
 
 const adminNavItems: NavItem[] = [
   { text: 'Main Panel', icon: 'dashboard', path: '/admin' },
@@ -78,67 +86,6 @@ const AdminPanel = () => {
   const [recentRequests, setRecentRequests] = useState<RequestData[]>([]);
   const [latestActions, setLatestActions] = useState<ActionItem[]>([]);
 
-  const formatTimeAgo = useCallback((dateStr: string) => {
-    const minutes = Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60));
-    if (minutes < 60) return `${minutes} min ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
-    const days = Math.floor(hours / 24);
-    return `${days} day${days !== 1 ? 's' : ''} ago`;
-  }, []);
-
-  const isOverdueRequest = useCallback((req: RequestData) => {
-    const status = req.status.replace(/\s/g, '').toLowerCase();
-    if (status === 'overdue') return true;
-    if (status !== 'approved' && status !== 'checkedout') return false;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const end = new Date(req.requestedToUtc);
-    end.setHours(0, 0, 0, 0);
-
-    return today > end;
-  }, []);
-
-  const buildActions = useCallback((requests: RequestData[]) => {
-    const actions: ActionItem[] = [];
-
-    requests.forEach(req => {
-      if (req.returnedAtUtc) {
-        actions.push({
-          icon: 'check_circle',
-          iconColor: '#16a34a',
-          text: `${req.equipmentName} returned from ${req.userFullName}`,
-          timeAgo: formatTimeAgo(req.returnedAtUtc),
-          timestamp: new Date(req.returnedAtUtc).getTime(),
-        });
-      }
-
-      if (isOverdueRequest(req)) {
-        actions.push({
-          icon: 'error',
-          iconColor: '#dc2626',
-          text: `OVERDUE: ${req.equipmentName} due from ${req.userFullName}`,
-          timeAgo: formatTimeAgo(req.requestedToUtc),
-          timestamp: new Date(req.requestedToUtc).getTime(),
-        });
-      }
-
-      if (req.checkedOutAtUtc && req.status.toLowerCase() === 'checkedout') {
-        actions.push({
-          icon: 'shopping_cart',
-          iconColor: '#2563eb',
-          text: `${req.equipmentName} checked out by ${req.userFullName}`,
-          timeAgo: formatTimeAgo(req.checkedOutAtUtc),
-          timestamp: new Date(req.checkedOutAtUtc).getTime(),
-        });
-      }
-    });
-
-    return actions.sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
-  }, [formatTimeAgo, isOverdueRequest]);
-
   useEffect(() => {
     apiFetch(`${API_BASE}/api/users?page=1&pageSize=100`)
       .then(res => res.ok ? res.json() : Promise.reject())
@@ -160,13 +107,21 @@ const AdminPanel = () => {
       .then(res => res.ok ? res.json() : Promise.reject())
       .then((data: { items: RequestData[]; totalCount: number }) => {
         const items = data.items ?? [];
+        const now = new Date();
         setPendingRequests(items.filter(r => r.status.toLowerCase() === 'pending').length);
-        setOverdueItems(items.filter(isOverdueRequest).length);
+        setOverdueItems(items.filter(r => {
+          const s = r.status.replace(/\s/g, '').toLowerCase();
+          return (s === 'checkedout') && new Date(r.requestedToUtc) < now;
+        }).length);
         setRecentRequests(items.slice(0, 5));
-        setLatestActions(buildActions(items));
       })
       .catch(() => {});
-  }, [buildActions, isOverdueRequest]);
+
+    apiFetch(`${API_BASE}/api/requests/latest-actions?page=1&pageSize=5`)
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then((data: { items: ActionItem[] }) => setLatestActions(data.items ?? []))
+      .catch(() => {});
+  }, []);
 
   const handleLogout = async () => {
     setAnchorEl(null);
@@ -314,7 +269,7 @@ const AdminPanel = () => {
                     </tr>
                   ) : (
                     recentRequests.map(req => {
-                      const overdue = isOverdueRequest(req);
+                      const overdue = req.status.replace(/\s/g, '').toLowerCase() === 'checkedout' && new Date(req.requestedToUtc) < new Date();
 
                       return (
                       <tr key={req.id}>
@@ -399,7 +354,7 @@ const AdminPanel = () => {
                   <div key={i} className={styles.actionItem}>
                     <Icon style={{ color: action.iconColor, fontSize: 20 }}>{action.icon}</Icon>
                     <span className={styles.actionText}>{action.text}</span>
-                    <span className={styles.actionTime}>{action.timeAgo}</span>
+                    <span className={styles.actionTime}>{formatTimeAgo(action.timestamp)}</span>
                   </div>
                 ))
               )}

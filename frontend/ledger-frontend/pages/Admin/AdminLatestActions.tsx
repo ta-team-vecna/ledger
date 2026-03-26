@@ -1,150 +1,70 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import PageLayout from '../../components/PageLayout/PageLayout';
 import Icon from '@mui/material/Icon';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
+import Pagination from '../../components/Pagination/Pagination';
 import styles from './AdminLatestActions.module.css';
 import { useAdminGuard } from '../../hooks/useAdminGuard';
 import { apiFetch, API_BASE } from '../../src/utils/apiFetch';
 
-interface RequestData {
-  id: string;
-  userFullName: string;
-  equipmentName: string;
-  status: string;
-  requestedAtUtc: string;
-  requestedFromUtc: string;
-  requestedToUtc: string;
-  returnedAtUtc: string | null;
-  checkedOutAtUtc: string | null;
-  reviewedAtUtc: string | null;
-}
-
 interface ActionItem {
+  type: string;
   icon: string;
   iconColor: string;
-  type: string;
   text: string;
-  timeAgo: string;
-  timestamp: number;
+  timestamp: string;
 }
 
 const TYPE_LABELS: Record<string, string> = {
-  returned: 'Returned',
-  overdue: 'Overdue',
-  checkedout: 'Checked Out',
+  submitted: 'Submitted',
   approved: 'Approved',
   rejected: 'Rejected',
+  cancelled: 'Cancelled',
+  checkedout: 'Checked Out',
+  returned: 'Returned',
+  overdue: 'Overdue',
+};
+
+const PAGE_SIZE = 20;
+
+const formatTimeAgo = (dateStr: string) => {
+  const minutes = Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60));
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days !== 1 ? 's' : ''} ago`;
 };
 
 const AdminLatestActions = () => {
   const { loading: authLoading } = useAdminGuard();
-  const [allActions, setAllActions] = useState<ActionItem[]>([]);
+  const [actions, setActions] = useState<ActionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState('all');
-
-  const formatTimeAgo = useCallback((dateStr: string) => {
-    const minutes = Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60));
-    if (minutes < 60) return `${minutes} min ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
-    const days = Math.floor(hours / 24);
-    return `${days} day${days !== 1 ? 's' : ''} ago`;
-  }, []);
-
-  const isOverdue = useCallback((req: RequestData) => {
-    const s = req.status.replace(/\s/g, '').toLowerCase();
-    if (s === 'overdue') return true;
-    if (s !== 'approved' && s !== 'checkedout') return false;
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const end = new Date(req.requestedToUtc); end.setHours(0, 0, 0, 0);
-    return today > end;
-  }, []);
-
-  const buildActions = useCallback((requests: RequestData[]) => {
-    const actions: ActionItem[] = [];
-
-    requests.forEach(req => {
-      if (req.returnedAtUtc) {
-        actions.push({
-          icon: 'check_circle',
-          iconColor: '#16a34a',
-          type: 'returned',
-          text: `${req.equipmentName} returned by ${req.userFullName}`,
-          timeAgo: formatTimeAgo(req.returnedAtUtc),
-          timestamp: new Date(req.returnedAtUtc).getTime(),
-        });
-      }
-
-      if (isOverdue(req)) {
-        actions.push({
-          icon: 'error',
-          iconColor: '#dc2626',
-          type: 'overdue',
-          text: `OVERDUE: ${req.equipmentName} — ${req.userFullName}`,
-          timeAgo: formatTimeAgo(req.requestedToUtc),
-          timestamp: new Date(req.requestedToUtc).getTime(),
-        });
-      }
-
-      if (req.checkedOutAtUtc) {
-        const s = req.status.replace(/\s/g, '').toLowerCase();
-        if (s === 'checkedout') {
-          actions.push({
-            icon: 'shopping_cart',
-            iconColor: '#2563eb',
-            type: 'checkedout',
-            text: `${req.equipmentName} checked out by ${req.userFullName}`,
-            timeAgo: formatTimeAgo(req.checkedOutAtUtc),
-            timestamp: new Date(req.checkedOutAtUtc).getTime(),
-          });
-        }
-      }
-
-      if (req.reviewedAtUtc) {
-        const s = req.status.replace(/\s/g, '').toLowerCase();
-        if (s === 'approved') {
-          actions.push({
-            icon: 'thumb_up',
-            iconColor: '#059669',
-            type: 'approved',
-            text: `${req.equipmentName} approved for ${req.userFullName}`,
-            timeAgo: formatTimeAgo(req.reviewedAtUtc),
-            timestamp: new Date(req.reviewedAtUtc).getTime(),
-          });
-        } else if (s === 'rejected') {
-          actions.push({
-            icon: 'thumb_down',
-            iconColor: '#dc2626',
-            type: 'rejected',
-            text: `${req.equipmentName} rejected for ${req.userFullName}`,
-            timeAgo: formatTimeAgo(req.reviewedAtUtc),
-            timestamp: new Date(req.reviewedAtUtc).getTime(),
-          });
-        }
-      }
-    });
-
-    return actions.sort((a, b) => b.timestamp - a.timestamp);
-  }, [formatTimeAgo, isOverdue]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
-    apiFetch(`${API_BASE}/api/requests/all?page=1&pageSize=100`)
+    setLoading(true);
+    const typeParam = typeFilter !== 'all' ? `&type=${typeFilter}` : '';
+    apiFetch(`${API_BASE}/api/requests/latest-actions?page=${page}&pageSize=${PAGE_SIZE}${typeParam}`)
       .then(res => res.ok ? res.json() : Promise.reject())
-      .then((data: { items: RequestData[] }) => {
-        setAllActions(buildActions(data.items ?? []));
+      .then((data: { items: ActionItem[]; totalPages: number; totalCount: number }) => {
+        setActions(data.items ?? []);
+        setTotalPages(data.totalPages ?? 1);
+        setTotalCount(data.totalCount ?? 0);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [buildActions]);
+  }, [page, typeFilter]);
 
-  const filtered = typeFilter === 'all'
-    ? allActions
-    : allActions.filter(a => a.type === typeFilter);
+  useEffect(() => { setPage(1); }, [typeFilter]);
 
-  if (authLoading || loading) {
+  if (authLoading) {
     return (
       <PageLayout type="admin">
         <div className={styles.loadingContainer}>Loading actions...</div>
@@ -168,28 +88,28 @@ const AdminLatestActions = () => {
           </FormControl>
         </div>
 
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className={styles.loadingContainer}>Loading...</div>
+        ) : actions.length === 0 ? (
           <div className={styles.emptyState}>
             <Icon className={styles.emptyIcon}>history</Icon>
-            <p>{allActions.length === 0 ? 'No actions recorded yet.' : 'No actions match this filter.'}</p>
+            <p>No actions match this filter.</p>
           </div>
         ) : (
           <div className={styles.actionsList}>
-            {filtered.map((action, i) => (
+            {actions.map((action, i) => (
               <div key={i} className={styles.actionItem}>
                 <div className={styles.iconWrap}>
                   <Icon style={{ color: action.iconColor, fontSize: 22 }}>{action.icon}</Icon>
                 </div>
                 <span className={styles.actionText}>{action.text}</span>
-                <span className={styles.actionTime}>{action.timeAgo}</span>
+                <span className={styles.actionTime}>{formatTimeAgo(action.timestamp)}</span>
               </div>
             ))}
           </div>
         )}
 
-        <div className={styles.footer}>
-          {filtered.length} action{filtered.length !== 1 ? 's' : ''} shown
-        </div>
+        <Pagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={PAGE_SIZE} onPageChange={setPage} />
       </div>
     </PageLayout>
   );
