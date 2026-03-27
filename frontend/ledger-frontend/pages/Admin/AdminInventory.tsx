@@ -288,6 +288,7 @@ const STATUS_STRING: Record<string, string> = {
     id: item.id,
     category: item.type,
     name: item.name,
+    serialNumber: item.serialNumber,
     location: item.location,
     status: item.status,
     icon: getTypeIcon(item.type)
@@ -300,6 +301,7 @@ const STATUS_STRING: Record<string, string> = {
   const filteredItems = displayItems.filter(item => {
     const matchesSearch = searchTerm === '' ||
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      String(item.serialNumber ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.category.toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -354,7 +356,7 @@ const STATUS_STRING: Record<string, string> = {
           <div className={styles.controlsRight}>
             <TextField
               size="small"
-              placeholder="Search..."
+              placeholder="Search by name, serial, category, location..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               InputProps={{
