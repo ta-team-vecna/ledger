@@ -41,10 +41,8 @@ public sealed class NotificationService : INotificationService {
         var html = EmailTemplates.ApprovalNeeded(request.User.FullName, request.Equipment.Name,
             request.RequestedFromUtc, request.RequestedToUtc);
 
-        foreach (var admin in admins) {
-            await _email.SendAsync(admin.Email, admin.FullName, subject, html, threadId, ct);
-            await RecordAsync(admin.Email, request.Id, "ApprovalNeeded", subject, threadId, ct);
-        }
+        await _email.SendToManyAsync(admins.Select(a => (a.Email, a.FullName)), subject, html, threadId, ct);
+        await RecordAsync("digest-admins", request.Id, "ApprovalNeeded", subject, threadId, ct);
     }
 
     public async Task NotifyRequestDecisionAsync(Guid requestId, string decision,
@@ -271,9 +269,7 @@ public sealed class NotificationService : INotificationService {
         var threadId = $"approval-digest-{now:yyyyMMdd}";
         var html = EmailTemplates.ApprovalBatchDigest(totalPending, items);
 
-        foreach (var admin in admins) {
-            await _email.SendAsync(admin.Email, admin.FullName, subject, html, threadId, ct);
-        }
+        await _email.SendToManyAsync(admins.Select(a => (a.Email, a.FullName)), subject, html, threadId, ct);
 
         // Record each request as notified
         foreach (var request in pendingRequests) {
@@ -316,9 +312,7 @@ public sealed class NotificationService : INotificationService {
         var threadId = $"inventory-digest-{now:yyyyMM}";
         var html = EmailTemplates.InventoryRiskDigest(items);
 
-        foreach (var admin in admins) {
-            await _email.SendAsync(admin.Email, admin.FullName, subject, html, threadId, ct);
-        }
+        await _email.SendToManyAsync(admins.Select(a => (a.Email, a.FullName)), subject, html, threadId, ct);
 
         // Record each item as reported using its own threadId for tracking
         foreach (var item in flaggedItems) {
