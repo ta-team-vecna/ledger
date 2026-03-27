@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using Ledger.Api.Auth;
 using Ledger.Api.Data;
 using Ledger.Api.Domain;
@@ -31,6 +32,9 @@ public sealed class AuthController : ControllerBase {
         _jwtTokenService = jwtTokenService;
         _scopeFactory = scopeFactory;
     }
+
+    private static string HashToken(string token) =>
+        Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(token)));
 
     private void FireNotification(Func<INotificationService, Task> action) {
         _ = Task.Run(async () => {
@@ -259,11 +263,10 @@ public sealed class AuthController : ControllerBase {
         // Always return 200 to avoid email enumeration
         if (user is null) return Ok(new { message = "If that email is registered, a reset link has been sent." });
 
-        user.PasswordResetToken = Random.Shared.Next(100000, 1000000).ToString();
+        var resetToken = Random.Shared.Next(100000, 1000000).ToString();
+        user.PasswordResetToken = HashToken(resetToken);
         user.PasswordResetTokenExpiry = DateTime.UtcNow.AddMinutes(15);
         await _db.SaveChangesAsync();
-
-        var resetToken = user.PasswordResetToken!;
         var userId = user.Id;
         FireNotification(n => n.NotifyPasswordResetAsync(userId, resetToken));
 
@@ -279,7 +282,7 @@ public sealed class AuthController : ControllerBase {
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ResetPassword(ResetPasswordRequest request) {
         var user = await _db.Users.FirstOrDefaultAsync(u =>
-            u.PasswordResetToken == request.Token &&
+            u.PasswordResetToken == HashToken(request.Token) &&
             u.PasswordResetTokenExpiry > DateTime.UtcNow);
 
         if (user is null) {
